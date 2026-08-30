@@ -228,7 +228,7 @@ Every default seat uses provider `deepseek` and model
 | `listen` | Absolute HttpListener prefix (optional; if several files set it, they must match) |
 | `maxRounds` | Review rounds before forced adjudication (default `2`) |
 | `convergenceThreshold` | Stop debate when average lexical similarity reaches this value (default `0.85`) |
-| `memberTimeoutSeconds` | Per-member call timeout (default `180`) |
+| `memberTimeoutSeconds` | Per-member call timeout (default `600`, 10 minutes) |
 | `model` | Advertised model id (falls back to the file name without `.json`) |
 | `members` | Seats: `id`, `persona`, `provider`, `model`, optional `chair` and `thinking` |
 

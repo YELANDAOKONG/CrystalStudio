@@ -8,7 +8,7 @@ public sealed record CouncilSettings
 {
     public const int DefaultMaxRounds = 2;
     public const double DefaultConvergenceThreshold = 0.85;
-    public const int DefaultMemberTimeoutSeconds = 180;
+    public const int DefaultMemberTimeoutSeconds = 600;
     public const string DefaultAdvertisedModel = "crystal-council";
     public const string DefaultWritingModel = "crystal-writing";
     public const string DefaultProvider = "deepseek";

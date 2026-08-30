@@ -206,7 +206,7 @@ Harness 目录可用 `CRYSTAL_HOME` 或 `--harness-home` 覆盖。
 | `listen` | 绝对的 HttpListener 前缀（可选；多份文件若都写了，必须一致） |
 | `maxRounds` | 强制裁决前的互评轮数上限（默认 `2`） |
 | `convergenceThreshold` | 提案平均字面相似度达到该值即停止辩论（默认 `0.85`） |
-| `memberTimeoutSeconds` | 单个成员调用超时（默认 `180`） |
+| `memberTimeoutSeconds` | 单个成员调用超时（默认 `600`，10 分钟） |
 | `model` | 对外广告的模型 id（缺省时用文件名去掉 `.json`） |
 | `members` | 席位：`id`、`persona`、`provider`、`model`，可选 `chair`、`thinking` |
 
