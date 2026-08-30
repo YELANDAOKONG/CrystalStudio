@@ -1,116 +1,117 @@
-# CrystalStudio
+# Crystal Studio 模型理事会
 
-A local OpenAI-compatible Model Council. One inbound chat request is
-answered by several models in parallel: isolated proposals, anonymous
-peer review, then a chair that selects an original proposal instead of
-inventing a fused answer.
+[English](README_en.md)
 
-CrystalStudio talks to models through the Crystal `IChatClient`
-contracts. Provider catalogs and API keys are shared with CrystalHarness
-under `~/.crystal`. Council seats live in `~/.crystal/studio`.
+本地运行的 OpenAI 兼容多模型协商服务。一次入站聊天请求会由多个模型并行回答：先隔离提案，再匿名互评，最后由主席从已有提案里选出一份，而不是把几份答案缝成一份从未被验证过的新内容。
 
-## What it does
+模型调用走 Crystal 的 `IChatClient` 契约。提供商目录和 API Key 与
+[CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)
+共享，放在 `~/.crystal`。理事会自己的席位配置在 `~/.crystal/studio`。
 
-- Hosts `POST /v1/chat/completions`, `GET /v1/models`, and `GET /health`
-  on a loopback port (default `http://127.0.0.1:18790/`).
-- Runs a three-phase council: isolated proposals, anonymous ranking
-  (Borda), then chair confirmation.
-- Streams council progress as `reasoning_content` (the compatible
-  thinking field). The final `content` or `tool_calls` is one original
-  member proposal.
-- Returns aggregated token usage from every member call:
-  `prompt_tokens`, `completion_tokens`, `total_tokens`, and
-  `completion_tokens_details.reasoning_tokens` when a provider reports
-  reasoning tokens.
-- Downgrades a disputed high-risk tool call to a text request for human
-  confirmation instead of returning that tool call.
+本项目不是编程 CLI，也不是
+[CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)
+的替代品。
 
-The council has no session of its own. Each HTTP request is a one-shot
-derivation from the full inbound transcript.
+## 它做什么
 
-## What it does not do
+- 在本机端口开放 `POST /v1/chat/completions`、`GET /v1/models`、
+  `GET /health`（默认 `http://127.0.0.1:18790/`）。
+- 三阶段议事：隔离提案、匿名排序（Borda 计分）、主席确认。
+- 把理事会正在做的事以 `reasoning_content`（兼容接口的思考字段）流式返回。最终的 `content` 或 `tool_calls` 一定是某位成员提过的原始方案。
+- 汇总每一次成员调用的 token：`prompt_tokens`、`completion_tokens`、
+  `total_tokens`；若提供商报了思考 token，还会带
+  `completion_tokens_details.reasoning_tokens`。
+- 高风险工具调用且排名仍有分歧时，降级为请求人工确认的文本，不把该工具调用当作可执行结果返回。
 
-It is not a coding CLI, not a replacement for CrystalHarness, and not a
-multi-turn meeting. It does not execute tools. It does not invent a new
-answer by stitching proposals together.
+理事会没有自己的会话。每一次 HTTP 请求都是基于完整入站记录的一次性推导。它不执行工具，也不把多份提案融合成新答案。
 
-## Requirements
+## 运行要求
 
 - .NET 10 SDK
-- A sibling checkout of Crystal at `../Crystal`
-- A sibling checkout of CrystalHarness at `../CrystalHarness`
-- API keys for the providers used by council seats (same resolution as
-  CrystalHarness)
+- 旁路检出 Crystal，路径为 `../Crystal`
+- 旁路检出 [CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)，路径为 `../CrystalHarness`
+- 各席位所用提供商的 API Key（解析顺序与 CrystalHarness 相同）
 
-## Build
+## 教程
 
-From this repository root:
+### 1. 把三个仓库放在一起
+
+在同一父目录下并列克隆 Crystal、CrystalHarness 和本仓库：
 
 ```bash
-dotnet build CrystalStudio.sln
-dotnet test CrystalStudio.sln
+git clone https://github.com/YELANDAOKONG/CrystalHarness.git
+git clone <本仓库地址> CrystalStudio
 ```
 
-The executable project is `CrystalStudio`.
+相对本仓库根目录，Crystal 必须在 `../Crystal`，
+[CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)
+必须在 `../CrystalHarness`。
 
-## Run
+### 2. 把 API Key 放到 Harness 能读到的地方
+
+不要把密钥写进本仓库。凭据路径与
+[CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)
+相同：
 
 ```bash
+export DEEPSEEK_API_KEY=your-api-key-here
+```
+
+也可以写 `~/.crystal/credentials.json`，或在
+`~/.crystal/config.json` 的 `providers.<name>.apiKey` 里配置。进程环境变量优先。
+
+默认四个席位都是 `deepseek` / `deepseek-v4-flash`。如果你已经在跑
+Harness，同一把 Key 这里也能用。
+
+### 3. 构建并启动理事会
+
+```bash
+cd CrystalStudio
+dotnet build CrystalStudio.sln
+dotnet test CrystalStudio.sln
 dotnet run --project CrystalStudio
 ```
 
-The first run writes `~/.crystal/studio/council.json` if it is missing,
-and reads `~/.crystal/config.json` plus credentials the same way
-CrystalHarness does.
+首次启动若还没有 `~/.crystal/studio/council.json` 会自动写出；
+`~/.crystal/config.json` 的读法与 CrystalHarness 相同。
 
-| Option | Meaning |
-| :--- | :--- |
-| `--port <n>` | Listen port (overrides `council.json`) |
-| `--studio-home <path>` | Council data directory (default: `CRYSTAL_STUDIO_HOME`, then `~/.crystal/studio`) |
-| `--harness-home <path>` | Shared Harness home (default: `CRYSTAL_HOME`, then `~/.crystal`) |
-| `--home <path>` | Alias for `--harness-home` |
-| `--help` | Print the option list |
+控制台应出现类似：
 
-Ctrl+C stops the listener.
-
-## Compatible API
-
-Point any OpenAI Chat Completions client at the listen prefix.
-
-```bash
-curl http://127.0.0.1:18790/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d "{\"model\":\"crystal-council\",\"messages\":[{\"role\":\"user\",\"content\":\"Explain Borda count.\"}]}"
+```text
+Crystal Studio council listening on http://127.0.0.1:18790/
 ```
 
-| Endpoint | Role |
-| :--- | :--- |
-| `POST /v1/chat/completions` | Run the council (`/chat/completions` is accepted) |
-| `GET /v1/models` | List the advertised council model |
-| `GET /health` | Liveness |
+保持该进程运行。Ctrl+C 停止。
 
-The inbound `model` field is not used to pick a seat. Every request
-uses the configured council. `stream: true` emits SSE chunks: thinking
-as `reasoning_content`, then the final answer, then `usage` on the
-finish chunk.
+### 4. 用兼容接口冒烟测试
 
-Non-stream responses include `usage` on the completion object.
+```bash
+curl http://127.0.0.1:18790/v1/models
+curl http://127.0.0.1:18790/health
+curl http://127.0.0.1:18790/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d "{\"model\":\"crystal-council\",\"messages\":[{\"role\":\"user\",\"content\":\"解释一下 Borda 计分。\"}]}"
+```
 
-When CrystalHarness uses the council as an OpenAI-compatible provider,
-set `replayReasoningContent` to `true` on that provider. The first
-turn stores council progress as `reasoning_content`. The next turn
-must send those blocks back. Official OpenAI Chat Completions rejects
-that field, so Harness defaults to refusing the replay unless the
-flag is on:
+加上 `"stream": true` 可以在 `reasoning_content` 里看到议事进度。
+
+### 5. 接到 CrystalHarness
+
+在 [CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)
+的 `~/.crystal/config.json` 里增加一个指向理事会的 OpenAI 兼容提供商。
+**必须**打开 `replayReasoningContent`：
 
 ```json
 {
+  "provider": "council",
+  "model": "crystal-council",
   "providers": {
     "council": {
       "protocol": "openai",
       "baseUri": "http://127.0.0.1:18790/v1/",
       "replayReasoningContent": true,
       "tokenLimit": "max_tokens",
+      "apiKey": "local",
       "models": {
         "crystal-council": {
           "contextWindow": 200000
@@ -121,13 +122,46 @@ flag is on:
 }
 ```
 
-Without that flag, Harness throws `cannot replay reasoning blocks on
-Chat Completions` on the second user message. The request never
-reaches the council.
+然后用该提供商和模型启动 Harness：
 
-## Configuration
+```bash
+cd ../CrystalHarness
+dotnet run --project CrystalHarness -- --provider council --model crystal-council
+```
 
-Council seats and listen settings:
+不设 `replayReasoningContent` 时，第一轮能通，第二轮用户消息会在
+Harness 本地报 `cannot replay reasoning blocks on Chat Completions`，
+请求到不了理事会。官方 OpenAI Chat Completions 拒绝回放该字段；理事会用它传思考，所以必须打开这个旗标。
+
+### 6. 改席位
+
+编辑 `~/.crystal/studio/council.json`。每个席位是一套人设，外加
+Harness 目录里已经存在的提供商和模型。改完后重启 Crystal Studio。
+
+## 启动参数
+
+| 选项 | 含义 |
+| :--- | :--- |
+| `--port <n>` | 监听端口（覆盖 `council.json`） |
+| `--studio-home <path>` | 理事会数据目录（默认 `CRYSTAL_STUDIO_HOME`，否则 `~/.crystal/studio`） |
+| `--harness-home <path>` | 共享的 Harness 主目录（默认 `CRYSTAL_HOME`，否则 `~/.crystal`） |
+| `--home <path>` | `--harness-home` 的别名 |
+| `--help` | 打印选项 |
+
+## 兼容接口
+
+| 路径 | 作用 |
+| :--- | :--- |
+| `POST /v1/chat/completions` | 召开理事会（也接受 `/chat/completions`） |
+| `GET /v1/models` | 列出对外广告的理事会模型 |
+| `GET /health` | 探活 |
+
+入站 `model` 字段不用于选席位。每次请求都走当前配置的理事会。
+`stream: true` 时以 SSE 推送：思考走 `reasoning_content`，然后是最终答案，结束 chunk 带 `usage`。非流式响应在 completion 对象上带 `usage`。
+
+## 配置
+
+理事会席位和监听：
 
 ```text
 ~/.crystal/studio/
@@ -135,7 +169,8 @@ Council seats and listen settings:
   logs/
 ```
 
-Shared providers and secrets (Harness):
+与 [CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)
+共享的提供商和密钥：
 
 ```text
 ~/.crystal/
@@ -143,55 +178,44 @@ Shared providers and secrets (Harness):
   credentials.json
 ```
 
-Override the studio directory with `CRYSTAL_STUDIO_HOME` or
-`--studio-home`. Override the Harness directory with `CRYSTAL_HOME` or
-`--harness-home`.
+理事会目录可用 `CRYSTAL_STUDIO_HOME` 或 `--studio-home` 覆盖。
+Harness 目录可用 `CRYSTAL_HOME` 或 `--harness-home` 覆盖。
 
-Default `council.json` seats are `analyst`, `skeptic`, `engineer`, and
-`chair`. Every default seat uses provider `deepseek` and model
-`deepseek-v4-flash`. Edit a seat's `provider` and `model` to use any
-entry already listed in the Harness catalog.
+默认 `council.json` 席位是 `analyst`、`skeptic`、`engineer`、`chair`。
+默认全部使用提供商 `deepseek`、模型 `deepseek-v4-flash`。
 
-| Field | Meaning |
+| 字段 | 含义 |
 | :--- | :--- |
-| `listen` | Absolute HttpListener prefix |
-| `maxRounds` | Review rounds before forced adjudication (default `2`) |
-| `convergenceThreshold` | Stop debate when average lexical similarity reaches this value (default `0.85`) |
-| `memberTimeoutSeconds` | Per-member call timeout (default `180`) |
-| `model` | Advertised model id (default `crystal-council`) |
-| `members` | Seats: `id`, `persona`, `provider`, `model`, optional `chair` |
+| `listen` | 绝对的 HttpListener 前缀 |
+| `maxRounds` | 强制裁决前的互评轮数上限（默认 `2`） |
+| `convergenceThreshold` | 提案平均字面相似度达到该值即停止辩论（默认 `0.85`） |
+| `memberTimeoutSeconds` | 单个成员调用超时（默认 `180`） |
+| `model` | 对外广告的模型 id（默认 `crystal-council`） |
+| `members` | 席位：`id`、`persona`、`provider`、`model`，可选 `chair` |
 
-Exactly one seat should set `"chair": true`. If none do, the last seat
-is the chair.
+应恰好有一个席位 `"chair": true`。都没标的话，最后一个席位当主席。
 
-## Credentials
+## 凭据
 
-API keys are not stored under `~/.crystal/studio`. They are resolved
-from the Harness home, in the same order as CrystalHarness:
+API Key 不写在 `~/.crystal/studio` 下。解析顺序与
+[CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)
+相同：
 
-1. Process environment (`DEEPSEEK_API_KEY`, `OPENAI_API_KEY`,
-   `<PROVIDER>_API_KEY`, or `CRYSTAL_API_KEY`)
-2. `providers.<name>.apiKey` in `~/.crystal/config.json`
+1. 进程环境变量（`DEEPSEEK_API_KEY`、`OPENAI_API_KEY`、
+   `<PROVIDER>_API_KEY` 或 `CRYSTAL_API_KEY`）
+2. `~/.crystal/config.json` 里的 `providers.<name>.apiKey`
 3. `~/.crystal/credentials.json`
 
-Do not put secrets in this repository or in `council.json`.
+不要把密钥写进本仓库或 `council.json`。
 
-## Council protocol
+## 议事协议
 
-1. **Propose.** Every member answers in isolation.
-2. **Review.** Proposals are shuffled and relabeled. Members return a
-   JSON ranking. Scores use Borda count.
-3. **Decide.** Debate stops when proposals converge or `maxRounds` is
-   hit. The chair confirms the leading original proposal. It does not
-   rewrite it.
+1. **提案。** 每位成员隔离作答。
+2. **互评。** 打乱顺序并抹去身份。成员返回 JSON 排序。票数用 Borda 计分。
+3. **裁决。** 观点收敛或达到 `maxRounds` 即停止。主席确认得票最高的那份**原始**提案，不重写。
 
-A member that times out or faults abstains for that round and may
-still take part in the next one. Cancelling the HTTP request cancels
-every in-flight Crystal call.
+超时或出错的成员本轮弃权，下一轮仍可参加。取消 HTTP 请求会取消所有进行中的 Crystal 调用。
 
-## Safety
+## 安全
 
-Runtime text is plain English. Secrets are not written to logs or to
-the thinking stream. High-risk tool calls (shell, write, delete, and
-similar) that still have ranking disagreement are returned as text
-asking for confirmation, not as an executable `tool_calls` payload.
+运行时文本为英文。密钥不会写入日志或思考流。高风险工具调用（shell、write、delete 等）若排名仍有分歧，返回的是请求确认的说明文本，而不是可执行的 `tool_calls`。
