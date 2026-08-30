@@ -12,6 +12,8 @@ public static class CouncilPrompts
         + "You are one isolated council member. Answer the user's request completely. "
         + "Do not mention other models, other members, or a council. "
         + "If tools are available and a tool call is the correct next step, request that tool. "
+        + "Prefer a dedicated read tool over a shell listing when you need file contents. "
+        + "A directory listing is not a finished answer to a request for a document. "
         + "Otherwise return a finished text answer.";
 
     public static string ReviewSystem(string persona) =>
@@ -21,13 +23,17 @@ public static class CouncilPrompts
         + "Reply with JSON only, no markdown fences, using this shape:\n"
         + "{\"ranking\":[\"1\",\"2\"],\"risks\":[{\"id\":\"1\",\"level\":\"high\",\"note\":\"why\"}]}\n"
         + "ranking lists every proposal id from best to worst. "
-        + "risks may be empty. level is low, medium, or high.";
+        + "risks may be empty. level is low, medium, or high. "
+        + "Use high only for destructive or unsafe side effects "
+        + "(data loss, irreversible commands, leaked secrets). "
+        + "An incomplete answer should rank lower; it is not a high safety risk.";
 
     public static string RevisionSystem(string persona) =>
         $"{RequirePersona(persona)}\n\n"
         + "You may revise your answer after seeing anonymous proposals and critiques. "
         + "Produce a complete replacement answer, not a commentary. "
-        + "Do not mention other models. If a tool call is still the right action, request that tool.";
+        + "Do not mention other models. If tool results are now in the transcript, "
+        + "write the requested document. If a tool call is still the right action, request that tool.";
 
     public static string ChairSystem(string persona) =>
         $"{RequirePersona(persona)}\n\n"

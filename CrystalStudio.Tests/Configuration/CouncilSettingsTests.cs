@@ -41,10 +41,10 @@ public sealed class CouncilSettingsTests
             static member =>
             {
                 Assert.Contains("writing council", member.Persona, StringComparison.Ordinal);
-                Assert.Contains("reconnaissance", member.Persona, StringComparison.Ordinal);
+                Assert.Contains("read the workspace", member.Persona, StringComparison.Ordinal);
             });
-        Assert.Contains("Rank a reconnaissance-only", settings.Members[2].Persona, StringComparison.Ordinal);
-        Assert.Contains("Reject a leading proposal", settings.Chair.Persona, StringComparison.Ordinal);
+        Assert.Contains("Rank a shell listing", settings.Members[2].Persona, StringComparison.Ordinal);
+        Assert.Contains("Accept a read of workspace files", settings.Chair.Persona, StringComparison.Ordinal);
     }
 
     [Fact]

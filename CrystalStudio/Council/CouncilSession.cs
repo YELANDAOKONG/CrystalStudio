@@ -236,15 +236,6 @@ public sealed class CouncilSession
             + (disputed ? " (disputed)." : "."),
             cancellationToken);
 
-        if (RiskClassifier.IsHighRisk(winner)
-            && (disputed || RiskClassifier.MarkedHighRisk(ballots, winnerLabel)))
-        {
-            await observer.ReportAsync(
-                "The leading proposal is a high-risk tool call with unresolved disagreement.",
-                cancellationToken);
-            return Degraded(BuildRiskMessage(winner, ballots, winnerLabel), observer);
-        }
-
         var chairAccepted = await ConfirmChairAsync(
             labeled,
             scores,
@@ -447,45 +438,6 @@ public sealed class CouncilSession
         }
 
         return text + ".";
-    }
-
-    private static string BuildRiskMessage(
-        Proposal winner,
-        IReadOnlyList<ReviewBallot> ballots,
-        string winnerLabel)
-    {
-        var builder = new System.Text.StringBuilder();
-        builder.AppendLine(
-            "The council will not execute this action automatically. "
-            + "Members disagreed on a high-risk tool call.");
-        builder.AppendLine();
-        builder.AppendLine("Leading proposal:");
-        builder.AppendLine(CouncilPrompts.Describe(winner));
-        builder.AppendLine();
-        builder.AppendLine("Reviewer risk notes:");
-        var any = false;
-        foreach (var ballot in ballots)
-        {
-            foreach (var risk in ballot.Risks)
-            {
-                if (risk.Label != winnerLabel)
-                {
-                    continue;
-                }
-
-                any = true;
-                builder.Append("- ").Append(risk.Level).Append(": ").AppendLine(risk.Note);
-            }
-        }
-
-        if (!any)
-        {
-            builder.AppendLine("- Rankings were close on a destructive tool call.");
-        }
-
-        builder.AppendLine();
-        builder.AppendLine("Confirm this action explicitly if you still want it.");
-        return builder.ToString();
     }
 
     private static int QuestionSeed(IReadOnlyList<ChatItem> items)

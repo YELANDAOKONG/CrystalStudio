@@ -47,7 +47,7 @@ public sealed class CouncilSessionTests
     }
 
     [Fact]
-    public async Task RunAsync_DegradesHighRiskDisputedToolCall()
+    public async Task RunAsync_ReturnsLeadingToolCallWhenMembersDisagree()
     {
         var settings = TwoMembers(maxRounds: 1);
         var factory = new ScriptedClientFactory(
@@ -63,7 +63,8 @@ public sealed class CouncilSessionTests
                 [
                     ChatReplies.Tool("c2", "bash", "{\"command\":\"rm -rf var\"}"),
                     ChatReplies.Text(
-                        "{\"ranking\":[\"2\",\"1\"],\"risks\":[{\"id\":\"2\",\"level\":\"high\",\"note\":\"destructive\"}]}")
+                        "{\"ranking\":[\"2\",\"1\"],\"risks\":[{\"id\":\"2\",\"level\":\"high\",\"note\":\"destructive\"}]}"),
+                    ChatReplies.Text("{\"accept\":true,\"explanation\":\"borda winner\"}")
                 ])
             });
         var session = new CouncilSession(settings, factory);
@@ -73,9 +74,9 @@ public sealed class CouncilSessionTests
             new SilentObserver(),
             CancellationToken.None);
 
-        Assert.Equal(CouncilOutcome.Degraded, action.Outcome);
-        Assert.Contains("will not execute", action.Text, StringComparison.Ordinal);
-        Assert.Null(action.ToolCall);
+        Assert.Equal(CouncilOutcome.ToolCall, action.Outcome);
+        Assert.NotNull(action.ToolCall);
+        Assert.Equal("bash", action.ToolCall.Name);
     }
 
     [Fact]
@@ -106,6 +107,39 @@ public sealed class CouncilSessionTests
 
         Assert.Equal(CouncilOutcome.Degraded, action.Outcome);
         Assert.Contains("chair rejected", action.Text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RunAsync_ReturnsAgreedReadOnlyBash()
+    {
+        const string listing = "{\"command\":\"ls -la zh-CN\"}";
+        var settings = TwoMembers(maxRounds: 1);
+        var factory = new ScriptedClientFactory(
+            new Dictionary<string, IChatClient>(StringComparer.Ordinal)
+            {
+                ["analyst"] = new ScriptedClient(
+                [
+                    ChatReplies.Tool("c1", "bash", listing),
+                    ChatReplies.Text("{\"ranking\":[\"1\",\"2\"],\"risks\":[]}")
+                ]),
+                ["chair"] = new ScriptedClient(
+                [
+                    ChatReplies.Tool("c2", "bash", listing),
+                    ChatReplies.Text("{\"ranking\":[\"1\",\"2\"],\"risks\":[]}"),
+                    ChatReplies.Text("{\"accept\":true,\"explanation\":\"needed listing\"}")
+                ])
+            });
+        var session = new CouncilSession(settings, factory);
+
+        var action = await session.RunAsync(
+            new ChatRequest([new ChatMessage(ChatRole.User, "list the files")]),
+            new SilentObserver(),
+            CancellationToken.None);
+
+        Assert.Equal(CouncilOutcome.ToolCall, action.Outcome);
+        Assert.NotNull(action.ToolCall);
+        Assert.Equal("bash", action.ToolCall.Name);
+        Assert.Equal(listing, action.ToolCall.Arguments);
     }
 
     private static CouncilSettings TwoMembers(int maxRounds)

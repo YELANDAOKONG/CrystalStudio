@@ -17,13 +17,13 @@ public sealed record CouncilSettings
     private const string WritingCharter =
         "You serve on a writing council. The user's requested writing is the deliverable: "
         + "a draft, outline, table, chronology, chapter, or other finished text as asked. "
-        + "Put that complete work in your answer this turn. "
-        + "Do not answer with reconnaissance (listing directories, counting lines, "
-        + "searching the tree) when the user asked for writing. "
-        + "If you need a known source file, read that file. "
+        + "When the user asked you to read the workspace and you do not yet have those contents, "
+        + "the correct next step is to read the relevant files "
+        + "(prefer a read or glob tool, not a shell listing). "
+        + "A directory listing is never the finished chronology or TABLE.md. "
+        + "Once file contents are in the transcript, put the complete work in your answer this turn. "
         + "If sources are missing, write the best complete piece you can from the conversation "
-        + "and state the assumptions. A tool call is acceptable only as a production step "
-        + "after the text exists, never as a detour to look around.";
+        + "and state the assumptions.";
 
     public CouncilSettings(
         int maxRounds,
@@ -184,7 +184,8 @@ public sealed record CouncilSettings
             + " You are a demanding reader. Hunt cliches, unsupported claims, "
             + "a sagging middle, and places a reader would skim or get lost. "
             + "Do not praise fluency that hides emptiness. "
-            + "Rank a reconnaissance-only tool call last when the user asked for a manuscript.",
+            + "Rank a shell listing below a read of the actual sources. "
+            + "If the transcript already has file contents, rank a listing last.",
             DefaultProvider,
             DefaultModel),
         new(
@@ -192,8 +193,9 @@ public sealed record CouncilSettings
             WritingCharter
             + " You are the council chair. Confirm whether the leading proposal is acceptable. "
             + "Do not invent a new draft. "
-            + "Reject a leading proposal that is only reconnaissance or does not contain "
-            + "the requested writing. Explain the choice in plain language.",
+            + "Accept a read of workspace files when that is the next needed step. "
+            + "Reject a directory listing offered as the finished manuscript. "
+            + "Explain the choice in plain language.",
             DefaultProvider,
             DefaultModel,
             chair: true)

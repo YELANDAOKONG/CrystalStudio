@@ -21,7 +21,7 @@
 - 汇总每一次成员调用的 token：`prompt_tokens`、`completion_tokens`、
   `total_tokens`；若提供商报了思考 token，还会带
   `completion_tokens_details.reasoning_tokens`。
-- 高风险工具调用且排名仍有分歧时，降级为请求人工确认的文本，不把该工具调用当作可执行结果返回。
+- 理事会不执行工具。选中的 `tool_calls` 原样返回，由调用方（任意兼容的 Harness）按自己的批准策略执行。
 
 理事会没有自己的会话。每一次 HTTP 请求都是基于完整入站记录的一次性推导。它不执行工具，也不把多份提案融合成新答案。
 
@@ -235,4 +235,4 @@ API Key 不写在 `~/.crystal/studio` 下。解析顺序与
 
 ## 安全
 
-运行时文本为英文。密钥不会写入日志或思考流。高风险工具调用（shell、write、delete 等）若排名仍有分歧，返回的是请求确认的说明文本，而不是可执行的 `tool_calls`。
+运行时文本为英文。密钥不会写入日志或思考流。理事会不执行工具；选中的 `tool_calls` 原样返回，由调用方按自己的批准策略决定是否执行。
