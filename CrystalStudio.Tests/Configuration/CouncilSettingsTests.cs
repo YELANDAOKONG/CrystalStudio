@@ -36,6 +36,15 @@ public sealed class CouncilSettingsTests
         Assert.Equal("stylist", settings.Members[1].Id);
         Assert.Equal("critic", settings.Members[2].Id);
         Assert.Equal("chair", settings.Chair.Id);
+        Assert.All(
+            settings.Members,
+            static member =>
+            {
+                Assert.Contains("writing council", member.Persona, StringComparison.Ordinal);
+                Assert.Contains("reconnaissance", member.Persona, StringComparison.Ordinal);
+            });
+        Assert.Contains("Rank a reconnaissance-only", settings.Members[2].Persona, StringComparison.Ordinal);
+        Assert.Contains("Reject a leading proposal", settings.Chair.Persona, StringComparison.Ordinal);
     }
 
     [Fact]
