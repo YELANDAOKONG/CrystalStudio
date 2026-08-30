@@ -20,6 +20,7 @@ public sealed record CouncilSettings
         + "When the user asked you to read the workspace and you do not yet have those contents, "
         + "the correct next step is to read the relevant files "
         + "(prefer a read or glob tool, not a shell listing). "
+        + "When several files are needed, request every independent read in one turn. "
         + "A directory listing is never the finished chronology or TABLE.md. "
         + "Once file contents are in the transcript, put the complete work in your answer this turn. "
         + "If sources are missing, write the best complete piece you can from the conversation "

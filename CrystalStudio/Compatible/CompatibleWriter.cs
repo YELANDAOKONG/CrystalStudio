@@ -130,24 +130,11 @@ public sealed class CompatibleWriter
             _roleSent = true;
         }
 
-        if (action.Outcome == CouncilOutcome.ToolCall && action.ToolCall is { } call)
+        if (action.Outcome == CouncilOutcome.ToolCall)
         {
             var delta = new JsonObject
             {
-                ["tool_calls"] = new JsonArray
-                {
-                    new JsonObject
-                    {
-                        ["index"] = 0,
-                        ["id"] = call.CallId,
-                        ["type"] = "function",
-                        ["function"] = new JsonObject
-                        {
-                            ["name"] = call.Name,
-                            ["arguments"] = call.Arguments
-                        }
-                    }
-                }
+                ["tool_calls"] = WriteToolCalls(action.ToolCalls, includeIndex: true)
             };
             await WriteChunkAsync(delta, finishReason: null, cancellationToken);
             await WriteChunkAsync(new JsonObject(), "tool_calls", cancellationToken, action.Usage);
@@ -176,22 +163,10 @@ public sealed class CompatibleWriter
             ["reasoning_content"] = action.Reasoning
         };
 
-        if (action.Outcome == CouncilOutcome.ToolCall && action.ToolCall is { } call)
+        if (action.Outcome == CouncilOutcome.ToolCall)
         {
             message["content"] = string.IsNullOrEmpty(action.Text) ? null : action.Text;
-            message["tool_calls"] = new JsonArray
-            {
-                new JsonObject
-                {
-                    ["id"] = call.CallId,
-                    ["type"] = "function",
-                    ["function"] = new JsonObject
-                    {
-                        ["name"] = call.Name,
-                        ["arguments"] = call.Arguments
-                    }
-                }
-            };
+            message["tool_calls"] = WriteToolCalls(action.ToolCalls, includeIndex: false);
         }
         else
         {
@@ -216,6 +191,33 @@ public sealed class CompatibleWriter
             },
             ["usage"] = WriteUsage(action.Usage)
         };
+    }
+
+    private static JsonArray WriteToolCalls(IReadOnlyList<ToolCall> calls, bool includeIndex)
+    {
+        var array = new JsonArray();
+        for (var i = 0; i < calls.Count; i++)
+        {
+            var call = calls[i];
+            var node = new JsonObject
+            {
+                ["id"] = call.CallId,
+                ["type"] = "function",
+                ["function"] = new JsonObject
+                {
+                    ["name"] = call.Name,
+                    ["arguments"] = call.Arguments
+                }
+            };
+            if (includeIndex)
+            {
+                node["index"] = i;
+            }
+
+            array.Add(node);
+        }
+
+        return array;
     }
 
     private async Task WriteChunkAsync(

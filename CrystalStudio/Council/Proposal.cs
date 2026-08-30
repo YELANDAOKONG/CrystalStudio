@@ -11,7 +11,7 @@ public sealed record Proposal
         string memberId,
         int round,
         string text,
-        ToolCall? toolCall = null)
+        IReadOnlyList<ToolCall>? toolCalls = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(memberId);
         if (round < 1)
@@ -24,7 +24,7 @@ public sealed record Proposal
         MemberId = memberId;
         Round = round;
         Text = text;
-        ToolCall = toolCall;
+        ToolCalls = toolCalls is null || toolCalls.Count == 0 ? [] : [.. toolCalls];
     }
 
     public string MemberId { get; }
@@ -33,17 +33,21 @@ public sealed record Proposal
 
     public string Text { get; }
 
-    public ToolCall? ToolCall { get; }
+    public IReadOnlyList<ToolCall> ToolCalls { get; }
 
-    public bool HasToolCall => ToolCall is not null;
+    public bool HasToolCall => ToolCalls.Count > 0;
 
     public string Fingerprint =>
-        ToolCall is null
+        ToolCalls.Count == 0
             ? Text
-            : $"{ToolCall.Name}\n{ToolCall.Arguments}";
+            : string.Join(
+                "\n---\n",
+                ToolCalls
+                    .Select(static call => $"{call.Name}\n{call.Arguments}")
+                    .OrderBy(static piece => piece, StringComparer.Ordinal));
 
     public bool IsEmpty =>
-        string.IsNullOrWhiteSpace(Text) && ToolCall is null;
+        string.IsNullOrWhiteSpace(Text) && ToolCalls.Count == 0;
 
     public override string ToString() => $"{MemberId}:{Round}";
 }

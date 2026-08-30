@@ -28,9 +28,10 @@ This product is not a coding CLI and not a replacement for
   `prompt_tokens`, `completion_tokens`, `total_tokens`, and
   `completion_tokens_details.reasoning_tokens` when a provider reports
   reasoning tokens.
-- Returns selected `tool_calls` as-is. Crystal Studio does not execute
-  tools; the caller (any compatible harness) applies its own approval
-  policy before running them.
+- Returns every `tool_calls` entry on the selected proposal as-is
+  (several independent reads in one turn). Crystal Studio does not
+  execute tools; the caller (any compatible harness) applies its own
+  approval policy before running them.
 
 The council has no session of its own. Each HTTP request is a one-shot
 derivation from the full inbound transcript. It does not execute tools
@@ -264,5 +265,5 @@ every in-flight Crystal call.
 
 Runtime text is plain English. Secrets are not written to logs or to
 the thinking stream. Crystal Studio does not execute tools. Selected
-`tool_calls` are returned as-is; the caller decides whether to run
-them under its own approval policy.
+`tool_calls` on the selected proposal are returned as-is; the caller
+decides whether to run them under its own approval policy.

@@ -193,7 +193,7 @@ public sealed class CompatibleListener : IDisposable
                 action = new CouncilAction(
                     action.Outcome,
                     action.Text,
-                    action.ToolCall,
+                    action.ToolCalls,
                     observer.Text,
                     action.Usage);
             }

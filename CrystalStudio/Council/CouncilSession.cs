@@ -260,7 +260,7 @@ public sealed class CouncilSession
             ? new CouncilAction(
                 CouncilOutcome.ToolCall,
                 winner.Text,
-                winner.ToolCall,
+                winner.ToolCalls,
                 observer is ProgressLog log ? log.Text : string.Empty,
                 _usage.Snapshot())
             : new CouncilAction(
@@ -384,7 +384,7 @@ public sealed class CouncilSession
     {
         var candidate = response.Candidates[0];
         var text = new System.Text.StringBuilder();
-        ToolCall? call = null;
+        var calls = new List<ToolCall>();
         foreach (var item in candidate.Items)
         {
             switch (item)
@@ -393,14 +393,14 @@ public sealed class CouncilSession
                     text.Append(message.Text);
                     break;
                 case ToolCall tool:
-                    call ??= tool;
+                    calls.Add(tool);
                     break;
                 default:
                     break;
             }
         }
 
-        return new Proposal(memberId, round, text.ToString(), call);
+        return new Proposal(memberId, round, text.ToString(), calls);
     }
 
     private static string ReadAssistantText(ChatResponse response)

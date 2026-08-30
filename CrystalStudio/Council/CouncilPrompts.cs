@@ -11,8 +11,10 @@ public static class CouncilPrompts
         $"{RequirePersona(persona)}\n\n"
         + "You are one isolated council member. Answer the user's request completely. "
         + "Do not mention other models, other members, or a council. "
-        + "If tools are available and a tool call is the correct next step, request that tool. "
-        + "Prefer a dedicated read tool over a shell listing when you need file contents. "
+        + "If tools are available and a tool call is the correct next step, request those tools. "
+        + "When several independent reads are needed, request every needed read in one turn "
+        + "rather than one file at a time. "
+        + "Prefer dedicated read tools over a shell listing when you need file contents. "
         + "A directory listing is not a finished answer to a request for a document. "
         + "Otherwise return a finished text answer.";
 
@@ -33,7 +35,8 @@ public static class CouncilPrompts
         + "You may revise your answer after seeing anonymous proposals and critiques. "
         + "Produce a complete replacement answer, not a commentary. "
         + "Do not mention other models. If tool results are now in the transcript, "
-        + "write the requested document. If a tool call is still the right action, request that tool.";
+        + "write the requested document. If tool calls are still the right action, "
+        + "request every needed tool in one turn.";
 
     public static string ChairSystem(string persona) =>
         $"{RequirePersona(persona)}\n\n"
@@ -123,12 +126,21 @@ public static class CouncilPrompts
     public static string Describe(Proposal proposal)
     {
         ArgumentNullException.ThrowIfNull(proposal);
-        if (proposal.ToolCall is { } call)
+        if (proposal.HasToolCall)
         {
-            var text = string.IsNullOrWhiteSpace(proposal.Text)
-                ? string.Empty
-                : proposal.Text + Environment.NewLine;
-            return $"{text}Tool call: {call.Name}\nArguments: {call.Arguments}";
+            var builder = new StringBuilder();
+            if (!string.IsNullOrWhiteSpace(proposal.Text))
+            {
+                builder.AppendLine(proposal.Text);
+            }
+
+            foreach (var call in proposal.ToolCalls)
+            {
+                builder.Append("Tool call: ").Append(call.Name).AppendLine();
+                builder.Append("Arguments: ").AppendLine(call.Arguments);
+            }
+
+            return builder.ToString().TrimEnd();
         }
 
         return string.IsNullOrWhiteSpace(proposal.Text)

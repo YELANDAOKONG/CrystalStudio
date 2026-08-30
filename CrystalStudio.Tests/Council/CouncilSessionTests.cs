@@ -1,5 +1,6 @@
 using Crystal;
 using Crystal.Chat;
+using Crystal.Tools;
 
 using CrystalStudio.Configuration;
 using CrystalStudio.Council;
@@ -75,8 +76,8 @@ public sealed class CouncilSessionTests
             CancellationToken.None);
 
         Assert.Equal(CouncilOutcome.ToolCall, action.Outcome);
-        Assert.NotNull(action.ToolCall);
-        Assert.Equal("bash", action.ToolCall.Name);
+        Assert.Single(action.ToolCalls);
+        Assert.Equal("bash", action.ToolCalls[0].Name);
     }
 
     [Fact]
@@ -137,9 +138,45 @@ public sealed class CouncilSessionTests
             CancellationToken.None);
 
         Assert.Equal(CouncilOutcome.ToolCall, action.Outcome);
-        Assert.NotNull(action.ToolCall);
-        Assert.Equal("bash", action.ToolCall.Name);
-        Assert.Equal(listing, action.ToolCall.Arguments);
+        Assert.Single(action.ToolCalls);
+        Assert.Equal("bash", action.ToolCalls[0].Name);
+        Assert.Equal(listing, action.ToolCalls[0].Arguments);
+    }
+
+    [Fact]
+    public async Task RunAsync_ReturnsEveryToolCallFromTheWinningProposal()
+    {
+        var first = new ToolCall("c1", "read", "{\"path\":\"a.md\"}");
+        var second = new ToolCall("c2", "read", "{\"path\":\"b.md\"}");
+        var settings = TwoMembers(maxRounds: 1);
+        var factory = new ScriptedClientFactory(
+            new Dictionary<string, IChatClient>(StringComparer.Ordinal)
+            {
+                ["analyst"] = new ScriptedClient(
+                [
+                    ChatReplies.Tools([first, second]),
+                    ChatReplies.Text("{\"ranking\":[\"1\",\"2\"],\"risks\":[]}")
+                ]),
+                ["chair"] = new ScriptedClient(
+                [
+                    ChatReplies.Tools([second, first]),
+                    ChatReplies.Text("{\"ranking\":[\"1\",\"2\"],\"risks\":[]}"),
+                    ChatReplies.Text("{\"accept\":true,\"explanation\":\"needed both files\"}")
+                ])
+            });
+        var session = new CouncilSession(settings, factory);
+
+        var action = await session.RunAsync(
+            new ChatRequest([new ChatMessage(ChatRole.User, "read the sources")]),
+            new SilentObserver(),
+            CancellationToken.None);
+
+        Assert.Equal(CouncilOutcome.ToolCall, action.Outcome);
+        Assert.Equal(2, action.ToolCalls.Count);
+        Assert.All(action.ToolCalls, static call => Assert.Equal("read", call.Name));
+        Assert.Equal(
+            ["{\"path\":\"a.md\"}", "{\"path\":\"b.md\"}"],
+            action.ToolCalls.Select(static call => call.Arguments).Order().ToArray());
     }
 
     private static CouncilSettings TwoMembers(int maxRounds)

@@ -42,6 +42,7 @@ public sealed class CouncilSettingsTests
             {
                 Assert.Contains("writing council", member.Persona, StringComparison.Ordinal);
                 Assert.Contains("read the workspace", member.Persona, StringComparison.Ordinal);
+                Assert.Contains("every independent read in one turn", member.Persona, StringComparison.Ordinal);
             });
         Assert.Contains("Rank a shell listing", settings.Members[2].Persona, StringComparison.Ordinal);
         Assert.Contains("Accept a read of workspace files", settings.Chair.Persona, StringComparison.Ordinal);

@@ -16,12 +16,14 @@ internal static class ChatReplies
 
     public static ChatResponse Tool(string callId, string name, string arguments, TokenUsage? usage = null)
     {
+        return Tools([new ToolCall(callId, name, arguments)], usage);
+    }
+
+    public static ChatResponse Tools(IReadOnlyList<ToolCall> calls, TokenUsage? usage = null)
+    {
+        ArgumentNullException.ThrowIfNull(calls);
         return new ChatResponse(
-            [
-                new ChatCandidate(
-                    [new ToolCall(callId, name, arguments)],
-                    FinishReason.ToolCalls)
-            ],
+            [new ChatCandidate([.. calls], FinishReason.ToolCalls)],
             usage);
     }
 }
