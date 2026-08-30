@@ -1,3 +1,5 @@
+using System.Net.Http;
+
 using Crystal;
 using Crystal.Chat;
 using Crystal.Tools;
@@ -177,6 +179,32 @@ public sealed class CouncilSessionTests
         Assert.Equal(
             ["{\"path\":\"a.md\"}", "{\"path\":\"b.md\"}"],
             action.ToolCalls.Select(static call => call.Arguments).Order().ToArray());
+    }
+
+    [Fact]
+    public async Task RunAsync_ReportsInnerExceptionWhenMembersFail()
+    {
+        var settings = TwoMembers(maxRounds: 1);
+        var failure = new InvalidOperationException(
+            "DeepSeek chat request failed.",
+            new HttpRequestException("Connection refused"));
+        var factory = new ScriptedClientFactory(
+            new Dictionary<string, IChatClient>(StringComparer.Ordinal)
+            {
+                ["analyst"] = new FailingChatClient(failure),
+                ["chair"] = new FailingChatClient(failure)
+            });
+        var observer = new ProgressLog();
+        var session = new CouncilSession(settings, factory);
+
+        var action = await session.RunAsync(
+            new ChatRequest([new ChatMessage(ChatRole.User, "hello")]),
+            observer,
+            CancellationToken.None);
+
+        Assert.Equal(CouncilOutcome.Degraded, action.Outcome);
+        Assert.Contains("analyst failed: DeepSeek chat request failed. Connection refused", action.Reasoning, StringComparison.Ordinal);
+        Assert.Contains("chair failed: DeepSeek chat request failed. Connection refused", action.Reasoning, StringComparison.Ordinal);
     }
 
     private static CouncilSettings TwoMembers(int maxRounds)

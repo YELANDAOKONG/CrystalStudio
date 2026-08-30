@@ -356,7 +356,7 @@ public sealed class CouncilSession
         }
         catch (Exception exception)
         {
-            await observer.ReportAsync($"{member.Id} failed: {exception.Message}", cancellationToken);
+            await observer.ReportAsync($"{member.Id} failed: {FormatFailure(exception)}", cancellationToken);
             return await onAbstain();
         }
     }
@@ -425,6 +425,28 @@ public sealed class CouncilSession
             text,
             reasoning: reasoning,
             usage: _usage.Snapshot());
+    }
+
+    private static string FormatFailure(Exception exception)
+    {
+        var parts = new List<string>();
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            var message = current.Message.Trim();
+            if (message.Length == 0)
+            {
+                continue;
+            }
+
+            if (parts.Exists(part => string.Equals(part, message, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            parts.Add(message);
+        }
+
+        return parts.Count == 0 ? exception.GetType().Name : string.Join(" ", parts);
     }
 
     private static string FormatUsage(TokenUsage usage)
