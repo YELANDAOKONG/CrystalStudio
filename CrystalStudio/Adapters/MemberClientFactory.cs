@@ -1,4 +1,5 @@
 using Crystal.Chat;
+using Crystal.Reasoning;
 
 using CrystalHarness.Configuration;
 using CrystalHarness.Home;
@@ -55,6 +56,15 @@ public sealed class MemberClientFactory : IMemberClientFactory, IDisposable
             _clients[key] = client;
             return client;
         }
+    }
+
+    public ReasoningOptions? ResolveReasoning(CouncilMember member)
+    {
+        ArgumentNullException.ThrowIfNull(member);
+        var harness = _settings
+            .WithOverrides(member.Provider, member.Model)
+            .WithThinkingEffort(ThinkingSelection.Parse(member.Thinking));
+        return harness.ResolveReasoning();
     }
 
     public void Dispose()

@@ -57,6 +57,40 @@ public sealed class CouncilStoreTests
         }
     }
 
+    [Fact]
+    public void Load_ReadsPerSeatThinking()
+    {
+        var root = UniqueRoot();
+        try
+        {
+            var store = new CouncilStore(new StudioHome(root));
+            store.LoadOrCreate();
+            var codingPath = Path.Combine(
+                root,
+                StudioHome.CouncilsDirectoryName,
+                StudioHome.CodingCouncilFileName);
+            var json = File.ReadAllText(codingPath);
+            json = json.Replace(
+                "\"id\": \"analyst\"",
+                "\"id\": \"analyst\",\n      \"thinking\": \"high\"",
+                StringComparison.Ordinal);
+            json = json.Replace(
+                "\"id\": \"chair\"",
+                "\"id\": \"chair\",\n      \"thinking\": \"off\"",
+                StringComparison.Ordinal);
+            File.WriteAllText(codingPath, json);
+
+            var loaded = store.Load();
+            Assert.Equal("high", loaded.Default.Members[0].Thinking);
+            Assert.Equal("default", loaded.Default.Members[1].Thinking);
+            Assert.Equal("off", loaded.Default.Chair.Thinking);
+        }
+        finally
+        {
+            DeleteRoot(root);
+        }
+    }
+
     private static string UniqueRoot() =>
         Path.Combine(Path.GetTempPath(), "crystal-studio-tests", Guid.NewGuid().ToString("N"));
 

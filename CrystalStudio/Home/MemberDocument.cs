@@ -11,4 +11,6 @@ internal sealed class MemberDocument
     public string? Model { get; set; }
 
     public bool? Chair { get; set; }
+
+    public string? Thinking { get; set; }
 }

@@ -144,7 +144,9 @@ Harness 本地报 `cannot replay reasoning blocks on Chat Completions`，
 
 编辑 `~/.crystal/studio/councils/` 下的 JSON。每个文件是一个理事会，
 `model` 字段是对外广告的模型 id。每个席位是一套人设，外加
-Harness 目录里已经存在的提供商和模型。改完后重启 Crystal Studio。
+Harness 目录里已经存在的提供商和模型。支持思考的模型可再写
+`thinking`：`default`（提供商默认）、`off`（关掉思考），或等级
+`minimal` / `low` / `medium` / `high` / `maximum`。模型不支持思考时该字段会被忽略。改完后重启 Crystal Studio。
 再加一个理事会：在该目录放一份新的 `*.json` 即可。
 
 ## 启动参数
@@ -206,7 +208,7 @@ Harness 目录可用 `CRYSTAL_HOME` 或 `--harness-home` 覆盖。
 | `convergenceThreshold` | 提案平均字面相似度达到该值即停止辩论（默认 `0.85`） |
 | `memberTimeoutSeconds` | 单个成员调用超时（默认 `180`） |
 | `model` | 对外广告的模型 id（缺省时用文件名去掉 `.json`） |
-| `members` | 席位：`id`、`persona`、`provider`、`model`，可选 `chair` |
+| `members` | 席位：`id`、`persona`、`provider`、`model`，可选 `chair`、`thinking` |
 
 每个理事会应恰好有一个席位 `"chair": true`。都没标的话，最后一个席位当主席。
 

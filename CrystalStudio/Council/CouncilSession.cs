@@ -346,7 +346,11 @@ public sealed class CouncilSession
         try
         {
             var client = _clients.Create(member);
-            var response = await client.CompleteAsync(request, timeout.Token);
+            var call = new ChatRequest(
+                request.Items,
+                request.Tools,
+                _clients.ResolveReasoning(member));
+            var response = await client.CompleteAsync(call, timeout.Token);
             _usage.Add(response.Usage);
             return await onSuccess(response, cancellationToken);
         }

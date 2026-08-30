@@ -1,3 +1,4 @@
+using CrystalHarness.Configuration;
 using CrystalHarness.Home;
 using CrystalHarness.Plugins;
 
@@ -98,7 +99,17 @@ public static class StudioApplication
         {
             var chair = member.Id == council.Chair.Id ? " (chair)" : string.Empty;
             Console.WriteLine(
-                $"    {member.Id}{chair}: {member.Provider}/{member.Model}");
+                $"    {member.Id}{chair}: {member.Provider}/{member.Model}{ThinkingSuffix(member)}");
         }
+    }
+
+    private static string ThinkingSuffix(CouncilMember member)
+    {
+        if (member.Thinking == ThinkingSelection.Default.Value)
+        {
+            return string.Empty;
+        }
+
+        return " thinking=" + member.Thinking;
     }
 }

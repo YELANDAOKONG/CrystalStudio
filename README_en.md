@@ -159,8 +159,11 @@ thinking, so the flag must be on.
 Edit the JSON files under `~/.crystal/studio/councils/`. Each file is
 one council; the `model` field is the advertised model id. Each seat is
 a persona plus a provider and model that already exist in the Harness
-catalog. Restart Crystal Studio after editing. Add another council by
-dropping another `*.json` into that directory.
+catalog. Models that can think also accept `thinking`: `default` (the
+provider default), `off` (disable thinking), or an effort
+(`minimal`, `low`, `medium`, `high`, `maximum`). The field is ignored
+when the model cannot think. Restart Crystal Studio after editing. Add
+another council by dropping another `*.json` into that directory.
 
 ## Run options
 
@@ -225,7 +228,7 @@ Every default seat uses provider `deepseek` and model
 | `convergenceThreshold` | Stop debate when average lexical similarity reaches this value (default `0.85`) |
 | `memberTimeoutSeconds` | Per-member call timeout (default `180`) |
 | `model` | Advertised model id (falls back to the file name without `.json`) |
-| `members` | Seats: `id`, `persona`, `provider`, `model`, optional `chair` |
+| `members` | Seats: `id`, `persona`, `provider`, `model`, optional `chair` and `thinking` |
 
 Each council should have exactly one seat with `"chair": true`. If none do, the last seat
 is the chair.

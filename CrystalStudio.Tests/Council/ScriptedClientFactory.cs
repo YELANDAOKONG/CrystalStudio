@@ -1,4 +1,5 @@
 using Crystal.Chat;
+using Crystal.Reasoning;
 
 using CrystalStudio.Configuration;
 using CrystalStudio.Interfaces;
@@ -23,5 +24,11 @@ internal sealed class ScriptedClientFactory : IMemberClientFactory
         }
 
         throw new InvalidOperationException($"No scripted client for '{member.Id}'.");
+    }
+
+    public ReasoningOptions? ResolveReasoning(CouncilMember member)
+    {
+        ArgumentNullException.ThrowIfNull(member);
+        return null;
     }
 }

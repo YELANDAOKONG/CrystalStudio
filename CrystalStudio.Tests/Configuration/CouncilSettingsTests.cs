@@ -1,5 +1,4 @@
 using CrystalStudio.Configuration;
-using CrystalStudio.Home;
 
 using Xunit;
 
@@ -22,6 +21,7 @@ public sealed class CouncilSettingsTests
             {
                 Assert.Equal("deepseek", member.Provider);
                 Assert.Equal("deepseek-v4-flash", member.Model);
+                Assert.Equal("default", member.Thinking);
             });
     }
 
@@ -36,5 +36,24 @@ public sealed class CouncilSettingsTests
         Assert.Equal("stylist", settings.Members[1].Id);
         Assert.Equal("critic", settings.Members[2].Id);
         Assert.Equal("chair", settings.Chair.Id);
+    }
+
+    [Fact]
+    public void CouncilMember_NormalizesThinkingAliases()
+    {
+        var member = new CouncilMember(
+            "analyst",
+            "persona",
+            "deepseek",
+            "deepseek-v4-flash",
+            thinking: "max");
+
+        Assert.Equal("maximum", member.Thinking);
+        Assert.Equal("off", new CouncilMember(
+            "chair",
+            "persona",
+            "deepseek",
+            "deepseek-v4-flash",
+            thinking: "none").Thinking);
     }
 }

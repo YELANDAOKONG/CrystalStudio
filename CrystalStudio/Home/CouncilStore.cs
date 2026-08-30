@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+using CrystalHarness.Configuration;
+
 using CrystalStudio.Configuration;
 
 namespace CrystalStudio.Home;
@@ -192,7 +194,8 @@ public sealed class CouncilStore
                     entry.Persona,
                     entry.Provider,
                     entry.Model,
-                    entry.Chair ?? false));
+                    entry.Chair ?? false,
+                    entry.Thinking));
         }
 
         return members;
@@ -210,7 +213,10 @@ public sealed class CouncilStore
                     Persona = member.Persona,
                     Provider = member.Provider,
                     Model = member.Model,
-                    Chair = member.Chair ? true : null
+                    Chair = member.Chair ? true : null,
+                    Thinking = member.Thinking == ThinkingSelection.Default.Value
+                        ? null
+                        : member.Thinking
                 });
         }
 

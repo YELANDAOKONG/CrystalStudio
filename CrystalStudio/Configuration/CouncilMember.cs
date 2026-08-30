@@ -1,3 +1,5 @@
+using CrystalHarness.Configuration;
+
 namespace CrystalStudio.Configuration;
 
 /// <summary>
@@ -10,7 +12,8 @@ public sealed record CouncilMember
         string persona,
         string provider,
         string model,
-        bool chair = false)
+        bool chair = false,
+        string? thinking = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(persona);
@@ -22,6 +25,7 @@ public sealed record CouncilMember
         Provider = provider.Trim();
         Model = model.Trim();
         Chair = chair;
+        Thinking = NormalizeThinking(thinking);
     }
 
     public string Id { get; }
@@ -34,5 +38,21 @@ public sealed record CouncilMember
 
     public bool Chair { get; }
 
+    /// <summary>
+    /// Host thinking gear for this seat: <c>default</c>, <c>off</c>, or a
+    /// Crystal effort name. Models that cannot think omit the hint.
+    /// </summary>
+    public string Thinking { get; }
+
     public override string ToString() => Id;
+
+    private static string NormalizeThinking(string? thinking)
+    {
+        if (string.IsNullOrWhiteSpace(thinking))
+        {
+            return ThinkingSelection.Default.Value;
+        }
+
+        return ThinkingSelection.Parse(thinking).Value;
+    }
 }
