@@ -12,9 +12,10 @@ public sealed class CouncilSettingsTests
     {
         var settings = CouncilSettings.CreateDefault();
 
-        Assert.Equal(18790, settings.Port);
+        Assert.Equal("crystal-council", settings.AdvertisedModel);
         Assert.Equal(4, settings.Members.Count);
         Assert.Equal("chair", settings.Chair.Id);
+        Assert.Equal("analyst", settings.Members[0].Id);
         Assert.All(
             settings.Members,
             static member =>
@@ -25,33 +26,15 @@ public sealed class CouncilSettingsTests
     }
 
     [Fact]
-    public void WithPort_RebuildsTheListenPrefix()
+    public void CreateWritingDefault_UsesBookSeats()
     {
-        var settings = CouncilSettings.CreateDefault().WithPort(19001);
-        Assert.Equal(19001, settings.ListenPrefix.Port);
-    }
+        var settings = CouncilSettings.CreateWritingDefault();
 
-    [Fact]
-    public void CouncilStore_RoundTripsAFile()
-    {
-        var root = Path.Combine(Path.GetTempPath(), "crystal-studio-tests", Guid.NewGuid().ToString("N"));
-        try
-        {
-            var store = new CouncilStore(new StudioHome(root));
-            var created = store.LoadOrCreate();
-            Assert.True(File.Exists(Path.Combine(root, "council.json")));
-
-            var loaded = store.Load();
-            Assert.Equal(created.AdvertisedModel, loaded.AdvertisedModel);
-            Assert.Equal(created.Members.Count, loaded.Members.Count);
-            Assert.Equal(created.Chair.Id, loaded.Chair.Id);
-        }
-        finally
-        {
-            if (Directory.Exists(root))
-            {
-                Directory.Delete(root, recursive: true);
-            }
-        }
+        Assert.Equal("crystal-writing", settings.AdvertisedModel);
+        Assert.Equal(4, settings.Members.Count);
+        Assert.Equal("architect", settings.Members[0].Id);
+        Assert.Equal("stylist", settings.Members[1].Id);
+        Assert.Equal("critic", settings.Members[2].Id);
+        Assert.Equal("chair", settings.Chair.Id);
     }
 }

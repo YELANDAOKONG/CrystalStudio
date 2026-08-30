@@ -6,7 +6,7 @@
 
 模型调用走 Crystal 的 `IChatClient` 契约。提供商目录和 API Key 与
 [CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)
-共享，放在 `~/.crystal`。理事会自己的席位配置在 `~/.crystal/studio`。
+共享，放在 `~/.crystal`。理事会自己的席位配置在 `~/.crystal/studio/councils`。
 
 本项目不是编程 CLI，也不是
 [CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)
@@ -60,7 +60,7 @@ export DEEPSEEK_API_KEY=your-api-key-here
 也可以写 `~/.crystal/credentials.json`，或在
 `~/.crystal/config.json` 的 `providers.<name>.apiKey` 里配置。进程环境变量优先。
 
-默认四个席位都是 `deepseek` / `deepseek-v4-flash`。如果你已经在跑
+默认两个理事会的席位都是 `deepseek` / `deepseek-v4-flash`。如果你已经在跑
 Harness，同一把 Key 这里也能用。
 
 ### 3. 构建并启动理事会
@@ -72,7 +72,8 @@ dotnet test CrystalStudio.sln
 dotnet run --project CrystalStudio
 ```
 
-首次启动若还没有 `~/.crystal/studio/council.json` 会自动写出；
+首次启动会在 `~/.crystal/studio/councils/` 写出默认的 `coding.json`
+（模型 id `crystal-council`）和 `writing.json`（模型 id `crystal-writing`）。
 `~/.crystal/config.json` 的读法与 CrystalHarness 相同。
 
 控制台应出现类似：
@@ -91,6 +92,9 @@ curl http://127.0.0.1:18790/health
 curl http://127.0.0.1:18790/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{\"model\":\"crystal-council\",\"messages\":[{\"role\":\"user\",\"content\":\"解释一下 Borda 计分。\"}]}"
+curl http://127.0.0.1:18790/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d "{\"model\":\"crystal-writing\",\"messages\":[{\"role\":\"user\",\"content\":\"给这本书起一个冷峻的开篇。\"}]}"
 ```
 
 加上 `"stream": true` 可以在 `reasoning_content` 里看到议事进度。
@@ -115,6 +119,9 @@ curl http://127.0.0.1:18790/v1/chat/completions \
       "models": {
         "crystal-council": {
           "contextWindow": 200000
+        },
+        "crystal-writing": {
+          "contextWindow": 200000
         }
       }
     }
@@ -135,14 +142,16 @@ Harness 本地报 `cannot replay reasoning blocks on Chat Completions`，
 
 ### 6. 改席位
 
-编辑 `~/.crystal/studio/council.json`。每个席位是一套人设，外加
+编辑 `~/.crystal/studio/councils/` 下的 JSON。每个文件是一个理事会，
+`model` 字段是对外广告的模型 id。每个席位是一套人设，外加
 Harness 目录里已经存在的提供商和模型。改完后重启 Crystal Studio。
+再加一个理事会：在该目录放一份新的 `*.json` 即可。
 
 ## 启动参数
 
 | 选项 | 含义 |
 | :--- | :--- |
-| `--port <n>` | 监听端口（覆盖 `council.json`） |
+| `--port <n>` | 监听端口（覆盖理事会文件里的 `listen`） |
 | `--studio-home <path>` | 理事会数据目录（默认 `CRYSTAL_STUDIO_HOME`，否则 `~/.crystal/studio`） |
 | `--harness-home <path>` | 共享的 Harness 主目录（默认 `CRYSTAL_HOME`，否则 `~/.crystal`） |
 | `--home <path>` | `--harness-home` 的别名 |
@@ -153,10 +162,11 @@ Harness 目录里已经存在的提供商和模型。改完后重启 Crystal Stu
 | 路径 | 作用 |
 | :--- | :--- |
 | `POST /v1/chat/completions` | 召开理事会（也接受 `/chat/completions`） |
-| `GET /v1/models` | 列出对外广告的理事会模型 |
+| `GET /v1/models` | 列出对外广告的全部理事会模型 |
 | `GET /health` | 探活 |
 
-入站 `model` 字段不用于选席位。每次请求都走当前配置的理事会。
+入站 `model` 字段用来选择召开哪一个理事会。省略时使用
+`crystal-council`（若该 id 存在）。未知模型返回 400。
 `stream: true` 时以 SSE 推送：思考走 `reasoning_content`，然后是最终答案，结束 chunk 带 `usage`。非流式响应在 completion 对象上带 `usage`。
 
 ## 配置
@@ -165,7 +175,9 @@ Harness 目录里已经存在的提供商和模型。改完后重启 Crystal Stu
 
 ```text
 ~/.crystal/studio/
-  council.json
+  councils/
+    coding.json
+    writing.json
   logs/
 ```
 
@@ -181,19 +193,22 @@ Harness 目录里已经存在的提供商和模型。改完后重启 Crystal Stu
 理事会目录可用 `CRYSTAL_STUDIO_HOME` 或 `--studio-home` 覆盖。
 Harness 目录可用 `CRYSTAL_HOME` 或 `--harness-home` 覆盖。
 
-默认 `council.json` 席位是 `analyst`、`skeptic`、`engineer`、`chair`。
+默认 `coding.json` 席位是 `analyst`、`skeptic`、`engineer`、`chair`，
+对外模型 id 为 `crystal-council`。
+默认 `writing.json` 席位是 `architect`、`stylist`、`critic`、`chair`，
+对外模型 id 为 `crystal-writing`。
 默认全部使用提供商 `deepseek`、模型 `deepseek-v4-flash`。
 
 | 字段 | 含义 |
 | :--- | :--- |
-| `listen` | 绝对的 HttpListener 前缀 |
+| `listen` | 绝对的 HttpListener 前缀（可选；多份文件若都写了，必须一致） |
 | `maxRounds` | 强制裁决前的互评轮数上限（默认 `2`） |
 | `convergenceThreshold` | 提案平均字面相似度达到该值即停止辩论（默认 `0.85`） |
 | `memberTimeoutSeconds` | 单个成员调用超时（默认 `180`） |
-| `model` | 对外广告的模型 id（默认 `crystal-council`） |
+| `model` | 对外广告的模型 id（缺省时用文件名去掉 `.json`） |
 | `members` | 席位：`id`、`persona`、`provider`、`model`，可选 `chair` |
 
-应恰好有一个席位 `"chair": true`。都没标的话，最后一个席位当主席。
+每个理事会应恰好有一个席位 `"chair": true`。都没标的话，最后一个席位当主席。
 
 ## 凭据
 
@@ -206,7 +221,7 @@ API Key 不写在 `~/.crystal/studio` 下。解析顺序与
 2. `~/.crystal/config.json` 里的 `providers.<name>.apiKey`
 3. `~/.crystal/credentials.json`
 
-不要把密钥写进本仓库或 `council.json`。
+不要把密钥写进本仓库或 `councils/*.json`。
 
 ## 议事协议
 

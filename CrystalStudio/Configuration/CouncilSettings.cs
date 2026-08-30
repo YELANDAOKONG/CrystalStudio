@@ -1,34 +1,28 @@
 namespace CrystalStudio.Configuration;
 
 /// <summary>
-/// Council-owned settings. Provider catalogs and API keys come from Harness.
+/// One named council: advertised model id, debate rules, and seats.
+/// Provider catalogs and API keys come from Harness.
 /// </summary>
 public sealed record CouncilSettings
 {
-    public const int DefaultPort = 18790;
     public const int DefaultMaxRounds = 2;
     public const double DefaultConvergenceThreshold = 0.85;
     public const int DefaultMemberTimeoutSeconds = 180;
     public const string DefaultAdvertisedModel = "crystal-council";
+    public const string DefaultWritingModel = "crystal-writing";
     public const string DefaultProvider = "deepseek";
     public const string DefaultModel = "deepseek-v4-flash";
 
     public CouncilSettings(
-        Uri listenPrefix,
         int maxRounds,
         double convergenceThreshold,
         TimeSpan memberTimeout,
         string advertisedModel,
         IReadOnlyList<CouncilMember> members)
     {
-        ArgumentNullException.ThrowIfNull(listenPrefix);
         ArgumentException.ThrowIfNullOrWhiteSpace(advertisedModel);
         ArgumentNullException.ThrowIfNull(members);
-
-        if (!listenPrefix.IsAbsoluteUri)
-        {
-            throw new ArgumentException("Listen prefix must be absolute.", nameof(listenPrefix));
-        }
 
         if (maxRounds < 1)
         {
@@ -73,7 +67,6 @@ public sealed record CouncilSettings
             }
         }
 
-        ListenPrefix = listenPrefix;
         MaxRounds = maxRounds;
         ConvergenceThreshold = convergenceThreshold;
         MemberTimeout = memberTimeout;
@@ -81,8 +74,6 @@ public sealed record CouncilSettings
         Members = members;
         Chair = ResolveChair(members);
     }
-
-    public Uri ListenPrefix { get; }
 
     public int MaxRounds { get; }
 
@@ -96,40 +87,25 @@ public sealed record CouncilSettings
 
     public CouncilMember Chair { get; }
 
-    public int Port => ListenPrefix.IsDefaultPort ? DefaultPort : ListenPrefix.Port;
+    public static CouncilSettings CreateDefault() =>
+        Create(DefaultAdvertisedModel, CreateCodingMembers());
 
-    public static CouncilSettings CreateDefault()
+    public static CouncilSettings CreateWritingDefault() =>
+        Create(DefaultWritingModel, CreateWritingMembers());
+
+    public override string ToString() => AdvertisedModel;
+
+    private static CouncilSettings Create(
+        string advertisedModel,
+        IReadOnlyList<CouncilMember> members)
     {
         return new CouncilSettings(
-            new Uri($"http://127.0.0.1:{DefaultPort}/"),
             DefaultMaxRounds,
             DefaultConvergenceThreshold,
             TimeSpan.FromSeconds(DefaultMemberTimeoutSeconds),
-            DefaultAdvertisedModel,
-            CreateDefaultMembers());
+            advertisedModel,
+            members);
     }
-
-    public CouncilSettings WithPort(int port)
-    {
-        if (port is < 1 or > 65535)
-        {
-            throw new ArgumentOutOfRangeException(nameof(port), port, "Port must be 1 to 65535.");
-        }
-
-        var builder = new UriBuilder(ListenPrefix)
-        {
-            Port = port
-        };
-        return new CouncilSettings(
-            builder.Uri,
-            MaxRounds,
-            ConvergenceThreshold,
-            MemberTimeout,
-            AdvertisedModel,
-            Members);
-    }
-
-    public override string ToString() => nameof(CouncilSettings);
 
     private static CouncilMember ResolveChair(IReadOnlyList<CouncilMember> members)
     {
@@ -144,7 +120,7 @@ public sealed record CouncilSettings
         return members[^1];
     }
 
-    private static IReadOnlyList<CouncilMember> CreateDefaultMembers() =>
+    private static IReadOnlyList<CouncilMember> CreateCodingMembers() =>
     [
         new(
             "analyst",
@@ -168,6 +144,38 @@ public sealed record CouncilSettings
             "chair",
             "You are the council chair. Confirm whether the leading proposal is acceptable. "
             + "Do not invent a new answer. Explain the choice in plain language.",
+            DefaultProvider,
+            DefaultModel,
+            chair: true)
+    ];
+
+    private static IReadOnlyList<CouncilMember> CreateWritingMembers() =>
+    [
+        new(
+            "architect",
+            "You are a book architect. Shape structure, argument, chapter flow, "
+            + "and what the reader must understand at each beat. "
+            + "Prefer a complete outline or draft over fragments.",
+            DefaultProvider,
+            DefaultModel),
+        new(
+            "stylist",
+            "You are a prose stylist. Attend to voice, rhythm, diction, "
+            + "and whether the sentences earn their length. "
+            + "Cut decoration that does not serve the piece.",
+            DefaultProvider,
+            DefaultModel),
+        new(
+            "critic",
+            "You are a demanding reader. Hunt cliches, unsupported claims, "
+            + "a sagging middle, and places a reader would skim or get lost. "
+            + "Do not praise fluency that hides emptiness.",
+            DefaultProvider,
+            DefaultModel),
+        new(
+            "chair",
+            "You are the council chair. Confirm whether the leading proposal is acceptable. "
+            + "Do not invent a new draft. Explain the choice in plain language.",
             DefaultProvider,
             DefaultModel,
             chair: true)

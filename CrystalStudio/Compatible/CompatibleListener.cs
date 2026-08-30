@@ -8,23 +8,28 @@ using CrystalStudio.Interfaces;
 namespace CrystalStudio.Compatible;
 
 /// <summary>
-/// Local OpenAI-compatible HTTP front for one council.
+/// Local OpenAI-compatible HTTP front for every loaded council.
 /// </summary>
 public sealed class CompatibleListener : IDisposable
 {
     private readonly HttpListener _listener;
-    private readonly CouncilSettings _settings;
-    private readonly CouncilSession _session;
+    private readonly CouncilCatalog _catalog;
+    private readonly Dictionary<string, CouncilSession> _sessions;
 
-    public CompatibleListener(CouncilSettings settings, IMemberClientFactory clients)
+    public CompatibleListener(CouncilCatalog catalog, IMemberClientFactory clients)
     {
-        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(clients);
 
-        _settings = settings;
-        _session = new CouncilSession(settings, clients);
+        _catalog = catalog;
+        _sessions = new Dictionary<string, CouncilSession>(StringComparer.OrdinalIgnoreCase);
+        foreach (var council in catalog.Councils)
+        {
+            _sessions[council.AdvertisedModel] = new CouncilSession(council, clients);
+        }
+
         _listener = new HttpListener();
-        _listener.Prefixes.Add(NormalizePrefix(settings.ListenPrefix));
+        _listener.Prefixes.Add(NormalizePrefix(catalog.ListenPrefix));
     }
 
     public Uri Prefix => new(_listener.Prefixes.First());
@@ -108,9 +113,9 @@ public sealed class CompatibleListener : IDisposable
             var writer = new CompatibleWriter(
                 response.OutputStream,
                 "models",
-                _settings.AdvertisedModel,
+                _catalog.Default.AdvertisedModel,
                 streamResponse: false);
-            await writer.WriteModelsAsync(_settings.AdvertisedModel, cancellationToken);
+            await writer.WriteModelsAsync(_catalog.AdvertisedModels, cancellationToken);
             response.Close();
             return;
         }
@@ -126,7 +131,7 @@ public sealed class CompatibleListener : IDisposable
         var missing = new CompatibleWriter(
             response.OutputStream,
             "error",
-            _settings.AdvertisedModel,
+            _catalog.Default.AdvertisedModel,
             streamResponse: false);
         await missing.WriteErrorAsync("Not found.", cancellationToken);
         response.Close();
@@ -145,21 +150,21 @@ public sealed class CompatibleListener : IDisposable
 
         if (!RequestTranslator.TryRead(body, out var chat, out var stream, out var model, out var error))
         {
-            response.StatusCode = 400;
-            response.ContentType = "application/json";
-            var errors = new CompatibleWriter(
-                response.OutputStream,
-                "error",
-                _settings.AdvertisedModel,
-                streamResponse: false);
-            await errors.WriteErrorAsync(error, cancellationToken);
-            response.Close();
+            await WriteClientErrorAsync(response, error, cancellationToken);
             return;
         }
 
-        var advertised = string.IsNullOrWhiteSpace(model)
-            ? _settings.AdvertisedModel
-            : model.Trim();
+        if (!_catalog.TryGet(model, out var council))
+        {
+            await WriteClientErrorAsync(
+                response,
+                $"Unknown model '{model.Trim()}'. Available models: {FormatModels()}.",
+                cancellationToken);
+            return;
+        }
+
+        var advertised = council.AdvertisedModel;
+        var session = _sessions[advertised];
         var completionId = "chatcmpl-" + Guid.NewGuid().ToString("N")[..24];
         response.StatusCode = 200;
         response.SendChunked = stream;
@@ -182,7 +187,7 @@ public sealed class CompatibleListener : IDisposable
 
         try
         {
-            var action = await _session.RunAsync(chat, observer, requestCts.Token);
+            var action = await session.RunAsync(chat, observer, requestCts.Token);
             if (!stream)
             {
                 action = new CouncilAction(
@@ -207,6 +212,24 @@ public sealed class CompatibleListener : IDisposable
             response.Close();
         }
     }
+
+    private async Task WriteClientErrorAsync(
+        HttpListenerResponse response,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        response.StatusCode = 400;
+        response.ContentType = "application/json";
+        var errors = new CompatibleWriter(
+            response.OutputStream,
+            "error",
+            _catalog.Default.AdvertisedModel,
+            streamResponse: false);
+        await errors.WriteErrorAsync(message, cancellationToken);
+        response.Close();
+    }
+
+    private string FormatModels() => string.Join(", ", _catalog.AdvertisedModels);
 
     private static string NormalizePrefix(Uri listen)
     {

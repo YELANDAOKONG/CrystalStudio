@@ -8,6 +8,9 @@ public sealed class StudioHome
     public const string EnvironmentVariableName = "CRYSTAL_STUDIO_HOME";
     public const string ParentDirectoryName = ".crystal";
     public const string DirectoryName = "studio";
+    public const string CouncilsDirectoryName = "councils";
+    public const string CodingCouncilFileName = "coding.json";
+    public const string WritingCouncilFileName = "writing.json";
 
     public StudioHome(string root)
     {
@@ -17,7 +20,7 @@ public sealed class StudioHome
 
     public string Root { get; }
 
-    public string CouncilPath => Path.Combine(Root, "council.json");
+    public string CouncilsDirectory => Path.Combine(Root, CouncilsDirectoryName);
 
     public string LogsDirectory => Path.Combine(Root, "logs");
 
@@ -53,5 +56,6 @@ public sealed class StudioHome
     {
         Directory.CreateDirectory(Root);
         Directory.CreateDirectory(LogsDirectory);
+        Directory.CreateDirectory(CouncilsDirectory);
     }
 }

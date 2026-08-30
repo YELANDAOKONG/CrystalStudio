@@ -39,7 +39,8 @@ public sealed class MemberClientFactory : IMemberClientFactory, IDisposable
         ArgumentNullException.ThrowIfNull(member);
         lock (_gate)
         {
-            if (_clients.TryGetValue(member.Id, out var existing))
+            var key = member.Provider + "/" + member.Model;
+            if (_clients.TryGetValue(key, out var existing))
             {
                 return existing;
             }
@@ -51,7 +52,7 @@ public sealed class MemberClientFactory : IMemberClientFactory, IDisposable
             }
 
             var client = _registry.CreateClient(harness, apiKey);
-            _clients[member.Id] = client;
+            _clients[key] = client;
             return client;
         }
     }

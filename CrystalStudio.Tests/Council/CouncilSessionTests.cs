@@ -111,7 +111,6 @@ public sealed class CouncilSessionTests
     private static CouncilSettings TwoMembers(int maxRounds)
     {
         return new CouncilSettings(
-            new Uri("http://127.0.0.1:18790/"),
             maxRounds,
             0.85,
             TimeSpan.FromSeconds(5),

@@ -10,7 +10,7 @@ inventing a fused answer.
 Crystal Studio talks to models through the Crystal `IChatClient`
 contracts. Provider catalogs and API keys are shared with
 [CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness) under
-`~/.crystal`. Council seats live in `~/.crystal/studio`.
+`~/.crystal`. Council seats live in `~/.crystal/studio/councils`.
 
 This product is not a coding CLI and not a replacement for
 [CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness).
@@ -83,8 +83,10 @@ dotnet test CrystalStudio.sln
 dotnet run --project CrystalStudio
 ```
 
-The first run writes `~/.crystal/studio/council.json` if it is missing,
-and reads `~/.crystal/config.json` the same way CrystalHarness does.
+The first run writes `~/.crystal/studio/councils/coding.json`
+(model id `crystal-council`) and `writing.json` (model id
+`crystal-writing`) if they are missing. Harness settings are read from
+`~/.crystal/config.json` the same way CrystalHarness does.
 
 You should see a listen line similar to:
 
@@ -102,6 +104,9 @@ curl http://127.0.0.1:18790/health
 curl http://127.0.0.1:18790/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{\"model\":\"crystal-council\",\"messages\":[{\"role\":\"user\",\"content\":\"Explain Borda count.\"}]}"
+curl http://127.0.0.1:18790/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d "{\"model\":\"crystal-writing\",\"messages\":[{\"role\":\"user\",\"content\":\"Write a cold opening for this book.\"}]}"
 ```
 
 Add `"stream": true` to watch council progress in `reasoning_content`.
@@ -126,6 +131,9 @@ at the council. `replayReasoningContent` must be `true`:
       "models": {
         "crystal-council": {
           "contextWindow": 200000
+        },
+        "crystal-writing": {
+          "contextWindow": 200000
         }
       }
     }
@@ -148,15 +156,17 @@ thinking, so the flag must be on.
 
 ### 6. Change seats
 
-Edit `~/.crystal/studio/council.json`. Each seat is a persona plus a
-provider and model that already exist in the Harness catalog. Restart
-Crystal Studio after editing.
+Edit the JSON files under `~/.crystal/studio/councils/`. Each file is
+one council; the `model` field is the advertised model id. Each seat is
+a persona plus a provider and model that already exist in the Harness
+catalog. Restart Crystal Studio after editing. Add another council by
+dropping another `*.json` into that directory.
 
 ## Run options
 
 | Option | Meaning |
 | :--- | :--- |
-| `--port <n>` | Listen port (overrides `council.json`) |
+| `--port <n>` | Listen port (overrides `listen` in council files) |
 | `--studio-home <path>` | Council data directory (default: `CRYSTAL_STUDIO_HOME`, then `~/.crystal/studio`) |
 | `--harness-home <path>` | Shared Harness home (default: `CRYSTAL_HOME`, then `~/.crystal`) |
 | `--home <path>` | Alias for `--harness-home` |
@@ -167,14 +177,14 @@ Crystal Studio after editing.
 | Endpoint | Role |
 | :--- | :--- |
 | `POST /v1/chat/completions` | Run the council (`/chat/completions` is accepted) |
-| `GET /v1/models` | List the advertised council model |
+| `GET /v1/models` | List the advertised council models |
 | `GET /health` | Liveness |
 
-The inbound `model` field is not used to pick a seat. Every request
-uses the configured council. `stream: true` emits SSE chunks: thinking
-as `reasoning_content`, then the final answer, then `usage` on the
-finish chunk. Non-stream responses include `usage` on the completion
-object.
+The inbound `model` field selects which council to convene. When it is
+omitted, `crystal-council` is used if that id exists. An unknown model
+returns 400. `stream: true` emits SSE chunks: thinking as
+`reasoning_content`, then the final answer, then `usage` on the finish
+chunk. Non-stream responses include `usage` on the completion object.
 
 ## Configuration
 
@@ -182,7 +192,9 @@ Council seats and listen settings:
 
 ```text
 ~/.crystal/studio/
-  council.json
+  councils/
+    coding.json
+    writing.json
   logs/
 ```
 
@@ -199,20 +211,23 @@ Override the studio directory with `CRYSTAL_STUDIO_HOME` or
 `--studio-home`. Override the Harness directory with `CRYSTAL_HOME` or
 `--harness-home`.
 
-Default `council.json` seats are `analyst`, `skeptic`, `engineer`, and
-`chair`. Every default seat uses provider `deepseek` and model
+Default `coding.json` seats are `analyst`, `skeptic`, `engineer`, and
+`chair`; the advertised model id is `crystal-council`.
+Default `writing.json` seats are `architect`, `stylist`, `critic`, and
+`chair`; the advertised model id is `crystal-writing`.
+Every default seat uses provider `deepseek` and model
 `deepseek-v4-flash`.
 
 | Field | Meaning |
 | :--- | :--- |
-| `listen` | Absolute HttpListener prefix |
+| `listen` | Absolute HttpListener prefix (optional; if several files set it, they must match) |
 | `maxRounds` | Review rounds before forced adjudication (default `2`) |
 | `convergenceThreshold` | Stop debate when average lexical similarity reaches this value (default `0.85`) |
 | `memberTimeoutSeconds` | Per-member call timeout (default `180`) |
-| `model` | Advertised model id (default `crystal-council`) |
+| `model` | Advertised model id (falls back to the file name without `.json`) |
 | `members` | Seats: `id`, `persona`, `provider`, `model`, optional `chair` |
 
-Exactly one seat should set `"chair": true`. If none do, the last seat
+Each council should have exactly one seat with `"chair": true`. If none do, the last seat
 is the chair.
 
 ## Credentials
@@ -226,7 +241,7 @@ from the Harness home, in the same order as
 2. `providers.<name>.apiKey` in `~/.crystal/config.json`
 3. `~/.crystal/credentials.json`
 
-Do not put secrets in this repository or in `council.json`.
+Do not put secrets in this repository or in `councils/*.json`.
 
 ## Council protocol
 

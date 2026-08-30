@@ -5,7 +5,7 @@ using CrystalStudio.Configuration;
 namespace CrystalStudio.Home;
 
 /// <summary>
-/// Reads and writes <c>council.json</c> under the Studio home directory.
+/// Reads and writes council files under <c>councils/</c> in the Studio home directory.
 /// </summary>
 public sealed class CouncilStore
 {
@@ -17,50 +17,78 @@ public sealed class CouncilStore
         _home = home;
     }
 
-    public CouncilSettings LoadOrCreate()
+    public CouncilCatalog LoadOrCreate()
     {
         _home.EnsureCreated();
-        if (!File.Exists(_home.CouncilPath))
-        {
-            var created = CouncilSettings.CreateDefault();
-            Save(created);
-            return created;
-        }
-
+        EnsureDefault(
+            StudioHome.CodingCouncilFileName,
+            CouncilSettings.CreateDefault());
+        EnsureDefault(
+            StudioHome.WritingCouncilFileName,
+            CouncilSettings.CreateWritingDefault());
         return Load();
     }
 
-    public CouncilSettings Load()
+    public CouncilCatalog Load()
     {
-        var json = File.ReadAllText(_home.CouncilPath);
-        var document = JsonSerializer.Deserialize<CouncilDocument>(json, StudioJson.Options)
-            ?? new CouncilDocument();
-        var defaults = CouncilSettings.CreateDefault();
-        var listen = string.IsNullOrWhiteSpace(document.Listen)
-            ? defaults.ListenPrefix
-            : new Uri(document.Listen, UriKind.Absolute);
-        var members = ReadMembers(document.Members, defaults);
+        var files = Directory.GetFiles(_home.CouncilsDirectory, "*.json");
+        Array.Sort(files, StringComparer.OrdinalIgnoreCase);
+        if (files.Length == 0)
+        {
+            throw new InvalidOperationException(
+                $"No council files were found in '{_home.CouncilsDirectory}'.");
+        }
 
-        return new CouncilSettings(
-            listen,
-            document.MaxRounds ?? defaults.MaxRounds,
-            document.ConvergenceThreshold ?? defaults.ConvergenceThreshold,
-            TimeSpan.FromSeconds(
-                document.MemberTimeoutSeconds ?? (int)defaults.MemberTimeout.TotalSeconds),
-            string.IsNullOrWhiteSpace(document.Model)
-                ? defaults.AdvertisedModel
-                : document.Model.Trim(),
-            members);
+        Uri? listen = null;
+        var councils = new List<CouncilSettings>(files.Length);
+        foreach (var path in files)
+        {
+            var document = ReadDocument(path);
+            listen = ReadListen(document.Listen, listen, path);
+            councils.Add(ReadCouncil(document, path));
+        }
+
+        return new CouncilCatalog(listen ?? CouncilCatalog.CreateDefaultListenPrefix(), councils);
     }
 
-    public void Save(CouncilSettings settings)
+    private void EnsureDefault(string fileName, CouncilSettings settings)
     {
+        var path = Path.Combine(_home.CouncilsDirectory, fileName);
+        if (File.Exists(path) || Advertises(settings.AdvertisedModel))
+        {
+            return;
+        }
+
+        WriteFile(path, settings);
+    }
+
+    private bool Advertises(string advertisedModel)
+    {
+        if (!Directory.Exists(_home.CouncilsDirectory))
+        {
+            return false;
+        }
+
+        foreach (var path in Directory.GetFiles(_home.CouncilsDirectory, "*.json"))
+        {
+            var document = ReadDocument(path);
+            var model = ResolveModel(document.Model, path);
+            if (string.Equals(model, advertisedModel, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void WriteFile(string path, CouncilSettings settings)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(settings);
-        _home.EnsureCreated();
 
         var document = new CouncilDocument
         {
-            Listen = settings.ListenPrefix.AbsoluteUri,
             MaxRounds = settings.MaxRounds,
             ConvergenceThreshold = settings.ConvergenceThreshold,
             MemberTimeoutSeconds = (int)settings.MemberTimeout.TotalSeconds,
@@ -68,7 +96,72 @@ public sealed class CouncilStore
             Members = WriteMembers(settings.Members)
         };
         var json = JsonSerializer.Serialize(document, StudioJson.Options);
-        File.WriteAllText(_home.CouncilPath, json);
+        File.WriteAllText(path, json);
+    }
+
+    private static CouncilDocument ReadDocument(string path)
+    {
+        var json = File.ReadAllText(path);
+        try
+        {
+            return JsonSerializer.Deserialize<CouncilDocument>(json, StudioJson.Options)
+                ?? new CouncilDocument();
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"Council file '{path}' is not valid JSON: {exception.Message}",
+                exception);
+        }
+    }
+
+    private static Uri? ReadListen(string? listen, Uri? current, string path)
+    {
+        if (string.IsNullOrWhiteSpace(listen))
+        {
+            return current;
+        }
+
+        var parsed = new Uri(listen, UriKind.Absolute);
+        if (current is not null
+            && !string.Equals(current.AbsoluteUri, parsed.AbsoluteUri, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Council file '{path}' has listen '{parsed.AbsoluteUri}', "
+                + $"which does not match '{current.AbsoluteUri}'.");
+        }
+
+        return parsed;
+    }
+
+    private static CouncilSettings ReadCouncil(CouncilDocument document, string path)
+    {
+        var defaults = CouncilSettings.CreateDefault();
+        var members = ReadMembers(document.Members, defaults);
+        return new CouncilSettings(
+            document.MaxRounds ?? defaults.MaxRounds,
+            document.ConvergenceThreshold ?? defaults.ConvergenceThreshold,
+            TimeSpan.FromSeconds(
+                document.MemberTimeoutSeconds ?? (int)defaults.MemberTimeout.TotalSeconds),
+            ResolveModel(document.Model, path),
+            members);
+    }
+
+    private static string ResolveModel(string? model, string path)
+    {
+        if (!string.IsNullOrWhiteSpace(model))
+        {
+            return model.Trim();
+        }
+
+        var fromFile = Path.GetFileNameWithoutExtension(path);
+        if (string.IsNullOrWhiteSpace(fromFile))
+        {
+            throw new InvalidOperationException(
+                $"Council file '{path}' needs a model id.");
+        }
+
+        return fromFile;
     }
 
     private static IReadOnlyList<CouncilMember> ReadMembers(

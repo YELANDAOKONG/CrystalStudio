@@ -87,22 +87,34 @@ public sealed class CompatibleWriter
         await WriteObjectAsync(payload, cancellationToken);
     }
 
-    public async Task WriteModelsAsync(string advertisedModel, CancellationToken cancellationToken)
+    public async Task WriteModelsAsync(
+        IReadOnlyList<string> advertisedModels,
+        CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(advertisedModel);
-        var payload = new JsonObject
+        ArgumentNullException.ThrowIfNull(advertisedModels);
+        if (advertisedModels.Count == 0)
         {
-            ["object"] = "list",
-            ["data"] = new JsonArray
-            {
+            throw new ArgumentException("At least one advertised model is required.", nameof(advertisedModels));
+        }
+
+        var data = new JsonArray();
+        foreach (var advertisedModel in advertisedModels)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(advertisedModel);
+            data.Add(
                 new JsonObject
                 {
                     ["id"] = advertisedModel,
                     ["object"] = "model",
                     ["created"] = _created,
                     ["owned_by"] = "crystal-studio"
-                }
-            }
+                });
+        }
+
+        var payload = new JsonObject
+        {
+            ["object"] = "list",
+            ["data"] = data
         };
         await WriteObjectAsync(payload, cancellationToken);
     }

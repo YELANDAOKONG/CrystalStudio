@@ -33,7 +33,7 @@ public sealed class StudioHomeTests
         var home = StudioHome.Resolve(root);
 
         Assert.Equal(Path.GetFullPath(root), home.Root);
-        Assert.Equal("council.json", Path.GetFileName(home.CouncilPath));
+        Assert.Equal(StudioHome.CouncilsDirectoryName, Path.GetFileName(home.CouncilsDirectory));
     }
 
     [Fact]
