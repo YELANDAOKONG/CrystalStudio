@@ -1,4 +1,5 @@
 using Crystal.Chat;
+using Crystal.Reasoning;
 using Crystal.Tools;
 
 using CrystalStudio.Compatible;
@@ -60,6 +61,29 @@ public sealed class RequestTranslatorTests
         Assert.IsType<ToolCall>(request.Items[0]);
         var result = Assert.IsType<ToolResult>(request.Items[1]);
         Assert.Equal("ok", result.Text);
+    }
+
+    [Fact]
+    public void TryRead_MapsAssistantReasoningContent()
+    {
+        var body =
+            """
+            {
+              "messages": [
+                {"role": "user", "content": "again"},
+                {
+                  "role": "assistant",
+                  "reasoning_content": "Council opened.",
+                  "content": "the previous answer"
+                }
+              ]
+            }
+            """;
+
+        Assert.True(RequestTranslator.TryRead(body, out var request, out _, out _, out _));
+        var reasoning = Assert.IsType<ChatReasoningItem>(request.Items[1]);
+        Assert.Equal("Council opened.", reasoning.Content.TextSegments[0].Text);
+        Assert.Equal("the previous answer", ((ChatMessage)request.Items[2]).Text);
     }
 
     [Fact]

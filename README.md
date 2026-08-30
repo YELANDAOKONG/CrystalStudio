@@ -96,6 +96,35 @@ finish chunk.
 
 Non-stream responses include `usage` on the completion object.
 
+When CrystalHarness uses the council as an OpenAI-compatible provider,
+set `replayReasoningContent` to `true` on that provider. The first
+turn stores council progress as `reasoning_content`. The next turn
+must send those blocks back. Official OpenAI Chat Completions rejects
+that field, so Harness defaults to refusing the replay unless the
+flag is on:
+
+```json
+{
+  "providers": {
+    "council": {
+      "protocol": "openai",
+      "baseUri": "http://127.0.0.1:18790/v1/",
+      "replayReasoningContent": true,
+      "tokenLimit": "max_tokens",
+      "models": {
+        "crystal-council": {
+          "contextWindow": 200000
+        }
+      }
+    }
+  }
+}
+```
+
+Without that flag, Harness throws `cannot replay reasoning blocks on
+Chat Completions` on the second user message. The request never
+reaches the council.
+
 ## Configuration
 
 Council seats and listen settings:

@@ -1,6 +1,7 @@
 using System.Text.Json;
 
 using Crystal.Chat;
+using Crystal.Reasoning;
 using Crystal.Tools;
 
 namespace CrystalStudio.Compatible;
@@ -103,23 +104,26 @@ public static class RequestTranslator
             return true;
         }
 
-        if (string.Equals(role, "assistant", StringComparison.OrdinalIgnoreCase)
-            && message.TryGetProperty("tool_calls", out var calls)
-            && calls.ValueKind == JsonValueKind.Array)
+        if (string.Equals(role, "assistant", StringComparison.OrdinalIgnoreCase))
         {
+            AddReasoning(message, items);
             if (!string.IsNullOrEmpty(content))
             {
                 items.Add(new ChatMessage(ChatRole.Assistant, content));
             }
 
-            foreach (var call in calls.EnumerateArray())
+            if (message.TryGetProperty("tool_calls", out var calls)
+                && calls.ValueKind == JsonValueKind.Array)
             {
-                if (!TryReadToolCall(call, out var toolCall, out error))
+                foreach (var call in calls.EnumerateArray())
                 {
-                    return false;
-                }
+                    if (!TryReadToolCall(call, out var toolCall, out error))
+                    {
+                        return false;
+                    }
 
-                items.Add(toolCall);
+                    items.Add(toolCall);
+                }
             }
 
             return true;
@@ -128,7 +132,6 @@ public static class RequestTranslator
         var chatRole = role.ToLowerInvariant() switch
         {
             "system" => ChatRole.System,
-            "assistant" => ChatRole.Assistant,
             "user" => ChatRole.User,
             _ => ChatRole.User
         };
@@ -213,6 +216,25 @@ public static class RequestTranslator
         }
 
         return tools;
+    }
+
+    private static void AddReasoning(JsonElement message, List<ChatItem> items)
+    {
+        if (!message.TryGetProperty("reasoning_content", out var node)
+            || node.ValueKind != JsonValueKind.String)
+        {
+            return;
+        }
+
+        var text = node.GetString();
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        items.Add(
+            new ChatReasoningItem(
+                new ReasoningContent([new ReasoningText(text, ReasoningTextKind.Trace)])));
     }
 
     private static string ReadContent(JsonElement message)
