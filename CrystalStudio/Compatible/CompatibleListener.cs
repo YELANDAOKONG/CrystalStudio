@@ -189,7 +189,8 @@ public sealed class CompatibleListener : IDisposable
                     action.Outcome,
                     action.Text,
                     action.ToolCall,
-                    observer.Text);
+                    observer.Text,
+                    action.Usage);
             }
 
             await writer.WriteActionAsync(action, requestCts.Token);

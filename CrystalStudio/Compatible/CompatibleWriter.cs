@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
+using Crystal;
 using Crystal.Tools;
 
 using CrystalStudio.Council;
@@ -137,7 +138,7 @@ public sealed class CompatibleWriter
                 }
             };
             await WriteChunkAsync(delta, finishReason: null, cancellationToken);
-            await WriteChunkAsync(new JsonObject(), "tool_calls", cancellationToken);
+            await WriteChunkAsync(new JsonObject(), "tool_calls", cancellationToken, action.Usage);
         }
         else
         {
@@ -149,7 +150,7 @@ public sealed class CompatibleWriter
                     cancellationToken);
             }
 
-            await WriteChunkAsync(new JsonObject(), "stop", cancellationToken);
+            await WriteChunkAsync(new JsonObject(), "stop", cancellationToken, action.Usage);
         }
 
         await WriteRawAsync("data: [DONE]\n\n", cancellationToken);
@@ -201,19 +202,15 @@ public sealed class CompatibleWriter
                     ["finish_reason"] = finish
                 }
             },
-            ["usage"] = new JsonObject
-            {
-                ["prompt_tokens"] = 0,
-                ["completion_tokens"] = 0,
-                ["total_tokens"] = 0
-            }
+            ["usage"] = WriteUsage(action.Usage)
         };
     }
 
     private async Task WriteChunkAsync(
         JsonObject delta,
         string? finishReason,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TokenUsage? usage = null)
     {
         var payload = new JsonObject
         {
@@ -231,7 +228,31 @@ public sealed class CompatibleWriter
                 }
             }
         };
+        if (usage is not null)
+        {
+            payload["usage"] = WriteUsage(usage);
+        }
+
         await WriteRawAsync("data: " + payload.ToJsonString(JsonOptions) + "\n\n", cancellationToken);
+    }
+
+    private static JsonObject WriteUsage(TokenUsage usage)
+    {
+        var usageNode = new JsonObject
+        {
+            ["prompt_tokens"] = usage.InputTokenCount,
+            ["completion_tokens"] = usage.OutputTokenCount,
+            ["total_tokens"] = usage.TotalTokenCount
+        };
+        if (usage.ReasoningTokenCount is { } reasoning)
+        {
+            usageNode["completion_tokens_details"] = new JsonObject
+            {
+                ["reasoning_tokens"] = reasoning
+            };
+        }
+
+        return usageNode;
     }
 
     private async Task WriteObjectAsync(JsonObject payload, CancellationToken cancellationToken)

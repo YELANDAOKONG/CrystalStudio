@@ -1,3 +1,4 @@
+using Crystal;
 using Crystal.Tools;
 
 namespace CrystalStudio.Council;
@@ -11,7 +12,8 @@ public sealed record CouncilAction
         CouncilOutcome outcome,
         string text,
         ToolCall? toolCall = null,
-        string reasoning = "")
+        string reasoning = "",
+        TokenUsage? usage = null)
     {
         ArgumentNullException.ThrowIfNull(outcome);
         ArgumentNullException.ThrowIfNull(text);
@@ -35,6 +37,7 @@ public sealed record CouncilAction
         Text = text;
         ToolCall = toolCall;
         Reasoning = reasoning;
+        Usage = usage ?? new TokenUsage(0, 0);
     }
 
     public CouncilOutcome Outcome { get; }
@@ -44,6 +47,8 @@ public sealed record CouncilAction
     public ToolCall? ToolCall { get; }
 
     public string Reasoning { get; }
+
+    public TokenUsage Usage { get; }
 
     public override string ToString() => Outcome.Value;
 }

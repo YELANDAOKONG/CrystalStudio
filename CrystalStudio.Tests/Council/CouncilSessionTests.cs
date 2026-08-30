@@ -1,3 +1,4 @@
+using Crystal;
 using Crystal.Chat;
 
 using CrystalStudio.Configuration;
@@ -18,14 +19,16 @@ public sealed class CouncilSessionTests
             {
                 ["analyst"] = new ScriptedClient(
                 [
-                    ChatReplies.Text("the shared complete answer"),
-                    ChatReplies.Text("{\"ranking\":[\"1\",\"2\"],\"risks\":[]}")
+                    ChatReplies.Text("the shared complete answer", new TokenUsage(10, 4, 2)),
+                    ChatReplies.Text("{\"ranking\":[\"1\",\"2\"],\"risks\":[]}", new TokenUsage(8, 3))
                 ]),
                 ["chair"] = new ScriptedClient(
                 [
-                    ChatReplies.Text("the shared complete answer"),
-                    ChatReplies.Text("{\"ranking\":[\"1\",\"2\"],\"risks\":[]}"),
-                    ChatReplies.Text("{\"accept\":true,\"explanation\":\"clear winner\"}")
+                    ChatReplies.Text("the shared complete answer", new TokenUsage(10, 4, 2)),
+                    ChatReplies.Text("{\"ranking\":[\"1\",\"2\"],\"risks\":[]}", new TokenUsage(8, 3)),
+                    ChatReplies.Text(
+                        "{\"accept\":true,\"explanation\":\"clear winner\"}",
+                        new TokenUsage(6, 2))
                 ])
             });
         var session = new CouncilSession(settings, factory);
@@ -37,6 +40,10 @@ public sealed class CouncilSessionTests
 
         Assert.Equal(CouncilOutcome.Text, action.Outcome);
         Assert.Equal("the shared complete answer", action.Text);
+        Assert.Equal(42, action.Usage.InputTokenCount);
+        Assert.Equal(16, action.Usage.OutputTokenCount);
+        Assert.Equal(58, action.Usage.TotalTokenCount);
+        Assert.Equal(4, action.Usage.ReasoningTokenCount);
     }
 
     [Fact]

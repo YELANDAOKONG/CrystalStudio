@@ -1,13 +1,13 @@
 namespace CrystalStudio.Home;
 
 /// <summary>
-/// Resolves the <c>~/.Crystal/studio</c> data directory and its well-known files.
+/// Resolves the <c>~/.crystal/studio</c> data directory and its well-known files.
 /// </summary>
 public sealed class StudioHome
 {
     public const string EnvironmentVariableName = "CRYSTAL_STUDIO_HOME";
-    private const string ParentDirectoryName = ".Crystal";
-    private const string DirectoryName = "studio";
+    public const string ParentDirectoryName = ".crystal";
+    public const string DirectoryName = "studio";
 
     public StudioHome(string root)
     {
@@ -40,7 +40,13 @@ public sealed class StudioHome
             throw new InvalidOperationException("The user profile directory is not available.");
         }
 
-        return new StudioHome(Path.Combine(userProfile, ParentDirectoryName, DirectoryName));
+        return new StudioHome(CombineDefault(userProfile));
+    }
+
+    public static string CombineDefault(string userProfile)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userProfile);
+        return Path.GetFullPath(Path.Combine(userProfile, ParentDirectoryName, DirectoryName));
     }
 
     public void EnsureCreated()

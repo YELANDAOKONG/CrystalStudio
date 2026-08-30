@@ -1,3 +1,4 @@
+using Crystal;
 using Crystal.Chat;
 using Crystal.Tools;
 
@@ -15,6 +16,7 @@ public sealed class CouncilSession
 
     private readonly CouncilSettings _settings;
     private readonly IMemberClientFactory _clients;
+    private readonly UsageTally _usage = new();
 
     public CouncilSession(CouncilSettings settings, IMemberClientFactory clients)
     {
@@ -74,7 +76,7 @@ public sealed class CouncilSession
                 await observer.ReportAsync(
                     "Every member abstained. The council cannot decide.",
                     cancellationToken);
-                return await DegradedAsync(
+                return Degraded(
                     "The council produced no usable proposals. Every member abstained or timed out.",
                     observer);
             }
@@ -214,7 +216,7 @@ public sealed class CouncilSession
     {
         if (labeled.Count == 0)
         {
-            return await DegradedAsync(
+            return Degraded(
                 "The council produced no usable proposals. Every member abstained or timed out.",
                 observer);
         }
@@ -240,7 +242,7 @@ public sealed class CouncilSession
             await observer.ReportAsync(
                 "The leading proposal is a high-risk tool call with unresolved disagreement.",
                 cancellationToken);
-            return await DegradedAsync(BuildRiskMessage(winner, ballots, winnerLabel), observer);
+            return Degraded(BuildRiskMessage(winner, ballots, winnerLabel), observer);
         }
 
         var chairAccepted = await ConfirmChairAsync(
@@ -251,7 +253,7 @@ public sealed class CouncilSession
             cancellationToken);
         if (!chairAccepted)
         {
-            return await DegradedAsync(
+            return Degraded(
                 "The chair rejected the leading proposal. The council will not return that action."
                 + Environment.NewLine
                 + Environment.NewLine
@@ -260,20 +262,23 @@ public sealed class CouncilSession
         }
 
         await observer.ReportAsync(
-            $"Council selected the original proposal labeled {winnerLabel}.",
+            $"Council selected the original proposal labeled {winnerLabel}. "
+            + FormatUsage(_usage.Snapshot()),
             cancellationToken);
         return winner.HasToolCall
             ? new CouncilAction(
                 CouncilOutcome.ToolCall,
                 winner.Text,
                 winner.ToolCall,
-                observer is ProgressLog log ? log.Text : string.Empty)
+                observer is ProgressLog log ? log.Text : string.Empty,
+                _usage.Snapshot())
             : new CouncilAction(
                 CouncilOutcome.Text,
                 string.IsNullOrWhiteSpace(winner.Text)
                     ? CouncilPrompts.Describe(winner)
                     : winner.Text,
-                reasoning: observer is ProgressLog progress ? progress.Text : string.Empty);
+                reasoning: observer is ProgressLog progress ? progress.Text : string.Empty,
+                usage: _usage.Snapshot());
     }
 
     private async Task<bool> ConfirmChairAsync(
@@ -342,6 +347,7 @@ public sealed class CouncilSession
         {
             var client = _clients.Create(member);
             var response = await client.CompleteAsync(request, timeout.Token);
+            _usage.Add(response.Usage);
             return await onSuccess(response, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -416,10 +422,27 @@ public sealed class CouncilSession
         return text.ToString();
     }
 
-    private static Task<CouncilAction> DegradedAsync(string text, ICouncilObserver observer)
+    private CouncilAction Degraded(string text, ICouncilObserver observer)
     {
         var reasoning = observer is ProgressLog log ? log.Text : string.Empty;
-        return Task.FromResult(new CouncilAction(CouncilOutcome.Degraded, text, reasoning: reasoning));
+        return new CouncilAction(
+            CouncilOutcome.Degraded,
+            text,
+            reasoning: reasoning,
+            usage: _usage.Snapshot());
+    }
+
+    private static string FormatUsage(TokenUsage usage)
+    {
+        var text =
+            $"Token usage: {usage.InputTokenCount} prompt, {usage.OutputTokenCount} completion, "
+            + $"{usage.TotalTokenCount} total";
+        if (usage.ReasoningTokenCount is { } reasoning)
+        {
+            text += $", {reasoning} reasoning";
+        }
+
+        return text + ".";
     }
 
     private static string BuildRiskMessage(
