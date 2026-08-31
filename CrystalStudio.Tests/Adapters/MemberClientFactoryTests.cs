@@ -1,7 +1,7 @@
 using Crystal.Reasoning;
 
-using CrystalHarness.Configuration;
-using CrystalHarness.Home;
+using CrystalCode.Configuration;
+using CrystalCode.Home;
 
 using CrystalStudio.Adapters;
 using CrystalStudio.Configuration;

@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-using CrystalHarness.Configuration;
+using CrystalCode.Configuration;
 
 using CrystalStudio.Configuration;
 

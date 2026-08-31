@@ -1,9 +1,9 @@
 using Crystal.Chat;
 using Crystal.Reasoning;
 
-using CrystalHarness.Configuration;
-using CrystalHarness.Home;
-using CrystalHarness.Plugins;
+using CrystalCode.Configuration;
+using CrystalCode.Home;
+using CrystalCode.Plugins;
 
 using CrystalStudio.Configuration;
 using CrystalStudio.Interfaces;
@@ -11,7 +11,7 @@ using CrystalStudio.Interfaces;
 namespace CrystalStudio.Adapters;
 
 /// <summary>
-/// Creates Crystal <see cref="IChatClient"/> instances from Harness provider settings.
+/// Creates Crystal <see cref="IChatClient"/> instances from CrystalCode provider settings.
 /// </summary>
 public sealed class MemberClientFactory : IMemberClientFactory, IDisposable
 {

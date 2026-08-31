@@ -2,7 +2,7 @@ namespace CrystalStudio.Configuration;
 
 /// <summary>
 /// One named council: advertised model id, debate rules, and seats.
-/// Provider catalogs and API keys come from Harness.
+/// Provider catalogs and API keys come from CrystalCode.
 /// </summary>
 public sealed record CouncilSettings
 {

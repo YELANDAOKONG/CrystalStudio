@@ -1,9 +1,9 @@
-using CrystalHarness.Configuration;
+using CrystalCode.Configuration;
 
 namespace CrystalStudio.Configuration;
 
 /// <summary>
-/// One council seat: a persona plus the Harness provider and model that speak for it.
+/// One council seat: a persona plus the CrystalCode provider and model that speak for it.
 /// </summary>
 public sealed record CouncilMember
 {

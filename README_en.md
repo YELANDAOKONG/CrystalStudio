@@ -9,11 +9,11 @@ inventing a fused answer.
 
 Crystal Studio talks to models through the Crystal `IChatClient`
 contracts. Provider catalogs and API keys are shared with
-[CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness) under
+[CrystalCode](https://github.com/YELANDAOKONG/CrystalCode) under
 `~/.crystal`. Council seats live in `~/.crystal/studio/councils`.
 
 This product is not a coding CLI and not a replacement for
-[CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness).
+[CrystalCode](https://github.com/YELANDAOKONG/CrystalCode).
 
 ## What it does
 
@@ -30,7 +30,7 @@ This product is not a coding CLI and not a replacement for
   reasoning tokens.
 - Returns every `tool_calls` entry on the selected proposal as-is
   (several independent reads in one turn). Crystal Studio does not
-  execute tools; the caller (any compatible harness) applies its own
+  execute tools; the caller (any compatible CrystalCode) applies its own
   approval policy before running them.
 
 The council has no session of its own. Each HTTP request is a one-shot
@@ -41,30 +41,31 @@ and does not stitch proposals into a new answer.
 
 - .NET 10 SDK
 - A sibling checkout of Crystal at `../Crystal`
-- A sibling checkout of [CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)
-  at `../CrystalHarness`
+- A sibling checkout of [CrystalCode](https://github.com/YELANDAOKONG/CrystalCode)
+  at `../CrystalCode`
 - API keys for the providers used by council seats (same resolution as
-  CrystalHarness)
+  CrystalCode)
 
 ## Tutorial
 
 ### 1. Check out the siblings
 
-From a parent directory, clone Crystal, CrystalHarness, and this repo
+From a parent directory, clone Crystal, CrystalCode, and this repo
 next to each other:
 
 ```bash
-git clone https://github.com/YELANDAOKONG/CrystalHarness.git
+git clone https://github.com/YELANDAOKONG/Crystal.git
+git clone https://github.com/YELANDAOKONG/CrystalCode.git
 git clone <this-repository-url> CrystalStudio
 ```
 
 Crystal must sit at `../Crystal` relative to this repository root.
-CrystalHarness must sit at `../CrystalHarness`.
+CrystalCode must sit at `../CrystalCode`.
 
-### 2. Put an API key where Harness can see it
+### 2. Put an API key where CrystalCode can see it
 
 Do not put secrets in this repository. Use the same credential path as
-[CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness):
+[CrystalCode](https://github.com/YELANDAOKONG/CrystalCode):
 
 ```bash
 export DEEPSEEK_API_KEY=your-api-key-here
@@ -74,7 +75,7 @@ Or write `~/.crystal/credentials.json` / `providers.<name>.apiKey` in
 `~/.crystal/config.json`. Environment variables win.
 
 Default council seats all use `deepseek` / `deepseek-v4-flash`. If you
-already run Harness, the same key works here.
+already run CrystalCode, the same key works here.
 
 ### 3. Build and start the council
 
@@ -87,8 +88,8 @@ dotnet run --project CrystalStudio
 
 The first run writes `~/.crystal/studio/councils/coding.json`
 (model id `crystal-council`) and `writing.json` (model id
-`crystal-writing`) if they are missing. Harness settings are read from
-`~/.crystal/config.json` the same way CrystalHarness does.
+`crystal-writing`) if they are missing. Host settings are read from
+`~/.crystal/config.json` the same way CrystalCode does.
 
 You should see a listen line similar to:
 
@@ -113,9 +114,9 @@ curl http://127.0.0.1:18790/v1/chat/completions \
 
 Add `"stream": true` to watch council progress in `reasoning_content`.
 
-### 5. Connect CrystalHarness
+### 5. Connect CrystalCode
 
-In [CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)
+In [CrystalCode](https://github.com/YELANDAOKONG/CrystalCode)
 `~/.crystal/config.json`, add an OpenAI-compatible provider that points
 at the council. `replayReasoningContent` must be `true`:
 
@@ -143,15 +144,15 @@ at the council. `replayReasoningContent` must be `true`:
 }
 ```
 
-Then start Harness with that provider and model:
+Then start CrystalCode with that provider and model:
 
 ```bash
-cd ../CrystalHarness
-dotnet run --project CrystalHarness -- --provider council --model crystal-council
+cd ../CrystalCode
+dotnet run --project CrystalCode -- --provider council --model crystal-council
 ```
 
 Without `replayReasoningContent`, the first turn works and the second
-user message fails in Harness with `cannot replay reasoning blocks on
+user message fails in CrystalCode with `cannot replay reasoning blocks on
 Chat Completions`. The request never reaches the council. Official
 OpenAI Chat Completions rejects that field; the council uses it for
 thinking, so the flag must be on.
@@ -160,7 +161,7 @@ thinking, so the flag must be on.
 
 Edit the JSON files under `~/.crystal/studio/councils/`. Each file is
 one council; the `model` field is the advertised model id. Each seat is
-a persona plus a provider and model that already exist in the Harness
+a persona plus a provider and model that already exist in the CrystalCode
 catalog. Models that can think also accept `thinking`: `default` (the
 provider default), `off` (disable thinking), or an effort
 (`minimal`, `low`, `medium`, `high`, `maximum`). The field is ignored
@@ -173,7 +174,7 @@ another council by dropping another `*.json` into that directory.
 | :--- | :--- |
 | `--port <n>` | Listen port (overrides `listen` in council files) |
 | `--studio-home <path>` | Council data directory (default: `CRYSTAL_STUDIO_HOME`, then `~/.crystal/studio`) |
-| `--harness-home <path>` | Shared Harness home (default: `CRYSTAL_HOME`, then `~/.crystal`) |
+| `--harness-home <path>` | Shared CrystalCode home (default: `CRYSTAL_HOME`, then `~/.crystal`) |
 | `--home <path>` | Alias for `--harness-home` |
 | `--help` | Print the option list |
 
@@ -204,7 +205,7 @@ Council seats and listen settings:
 ```
 
 Shared providers and secrets
-([CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness)):
+([CrystalCode](https://github.com/YELANDAOKONG/CrystalCode)):
 
 ```text
 ~/.crystal/
@@ -213,7 +214,7 @@ Shared providers and secrets
 ```
 
 Override the studio directory with `CRYSTAL_STUDIO_HOME` or
-`--studio-home`. Override the Harness directory with `CRYSTAL_HOME` or
+`--studio-home`. Override the CrystalCode directory with `CRYSTAL_HOME` or
 `--harness-home`.
 
 Default `coding.json` seats are `analyst`, `skeptic`, `engineer`, and
@@ -238,8 +239,8 @@ is the chair.
 ## Credentials
 
 API keys are not stored under `~/.crystal/studio`. They are resolved
-from the Harness home, in the same order as
-[CrystalHarness](https://github.com/YELANDAOKONG/CrystalHarness):
+from the CrystalCode home, in the same order as
+[CrystalCode](https://github.com/YELANDAOKONG/CrystalCode):
 
 1. Process environment (`DEEPSEEK_API_KEY`, `OPENAI_API_KEY`,
    `<PROVIDER>_API_KEY`, or `CRYSTAL_API_KEY`)

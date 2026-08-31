@@ -1,6 +1,6 @@
-using CrystalHarness.Configuration;
-using CrystalHarness.Home;
-using CrystalHarness.Plugins;
+using CrystalCode.Configuration;
+using CrystalCode.Home;
+using CrystalCode.Plugins;
 
 using CrystalStudio.Adapters;
 using CrystalStudio.Compatible;
@@ -10,7 +10,7 @@ using CrystalStudio.Home;
 namespace CrystalStudio;
 
 /// <summary>
-/// Loads Harness credentials, council seats, and the compatible listener.
+/// Loads CrystalCode credentials, council seats, and the compatible listener.
 /// </summary>
 public static class StudioApplication
 {
@@ -84,7 +84,7 @@ public static class StudioApplication
     {
         Console.WriteLine($"Crystal Studio council listening on {catalog.ListenPrefix.AbsoluteUri}");
         Console.WriteLine($"Studio data: {studioHome.Root}");
-        Console.WriteLine($"Harness data: {harnessHome.Root}");
+        Console.WriteLine($"CrystalCode data: {harnessHome.Root}");
         Console.WriteLine($"Advertised models: {string.Join(", ", catalog.AdvertisedModels)}");
         foreach (var council in catalog.Councils)
         {
